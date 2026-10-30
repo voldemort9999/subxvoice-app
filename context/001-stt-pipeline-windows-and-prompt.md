@@ -331,3 +331,47 @@ User decided:
   kaam aayega". The journal travels with the repo.
 
 ---
+
+## S-008 · 2026-10-30 · Split from Aryan's repo onto a fresh one
+
+Asked:
+> "abhi jo aryan wali repo hai usme current updated code ache se push karke uss se sare connection
+> tod do ab se hum ye nayi repo me setup karo aur nayi me hi sara push kare ge ok" — the new repo
+> being `voldemort9999/subxvoice-app`, for a separate hackathon project.
+
+Done:
+
+- Committed the context system, which S-006/S-007 had left uncommitted (`CLAUDE.md` +130 lines and
+  `context/`), as `c37bdd4`. `pnpm check` green first: 12/12 tasks.
+- Pushed `feat/soniox-india-region` to `aryan-2255/subxvoice`, then fast-forwarded `main` to the
+  same commit and pushed that too, so Aryan's default branch holds the complete current code rather
+  than an open PR. Verified both remote refs read `c37bdd4`.
+- Removed the `aryan-2255` remote; kept its history on the local branch `aryan-history`, and
+  deleted the two now-redundant feature branches.
+- Built a fresh single-commit history for the new repo: renamed old `main` out of the way,
+  `git checkout --orphan main`, one commit `a8a3816`. Verified `git ls-tree -r` of `a8a3816` is
+  byte-identical to `c37bdd4` — nothing added or lost in the transfer.
+- Added `origin` → `voldemort9999/subxvoice-app` and pushed `main`.
+- Rewrote the stale remote facts in `pillow/CLAUDE.md` and this INDEX.
+
+Established:
+
+- `.env` is covered by `.gitignore`'s `.env*` (line 11) and only `.env.example` is tracked, checked
+  before pushing to a new remote. 157 files in the commit.
+- The fast-forward to `main` needed no force and rewrote nothing: `main` had no commits the feature
+  branch lacked.
+- `gh` is not installed on this machine and the GitHub MCP server fails to authenticate, so PRs
+  cannot be read or merged from here. Pushing `main` directly was the way to get the code onto
+  Aryan's default branch.
+
+User decided:
+
+- **The old repo is read-only history.** Everything from here goes to `voldemort9999/subxvoice-app`.
+  The Aryan remote must not be re-added.
+- **The new repo starts with no history** — one "first commit" rather than the nine commits, since
+  it is the starting point of a different project.
+
+Still stale, not changed:
+
+- `AGENTS.md:11` and `README.md:10-11` still describe the two-person split (Aryan owns macOS, his
+  teammate owns Windows). Left alone because the team shape for the new project was not stated.

@@ -7,7 +7,7 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-10-30 · after S-007 · branch `feat/soniox-india-region` at `d6efd82`
+Last updated: 2026-10-30 · after S-008 · branch `main` at `a8a3816`, remote `voldemort9999/subxvoice-app`
 
 ## Where things stand
 
@@ -31,9 +31,12 @@ dictated English came out as "Pleez note dait…"; Soniox writes Indian-accented
 Devanagari*, and the prompt was romanising it phonetically instead of recognising English words
 (S-005). Both are fixed and covered by tests.
 
-PR #1 is merged. PR #2 (`feat/soniox-india-region`) is open with the India region, the workflow
-engine extraction and the prompt fix. Aryan has pushed Mac paste and a shared clipboard module on
-top of `main`; this branch was rebuilt off his latest `main` so his changes are intact.
+**The repo moved on 2026-10-30 (S-008).** All of the above was built in `aryan-2255/subxvoice`,
+shared with Aryan, where `main` now holds the complete code at `c37bdd4`. Work continues in a fresh
+repo, `voldemort9999/subxvoice-app`, for a separate project: single commit `a8a3816`, same tree,
+no history. The old remote is gone and must not be re-added; local branch `aryan-history` keeps
+that history as a backup. Aryan's own contributions (Mac paste, the shared clipboard module) are
+part of the tree and travelled across.
 
 Not built: `apps/api` (backend, login, sync, stats, teams), `packages/mcp` (types and a comment
 only), active-app context reading on either OS, `openApp` on Windows, `native/win-helper`, SQLite
@@ -41,8 +44,7 @@ only), active-app context reading on either OS, `openApp` on Windows, `native/wi
 
 ## Continue from here
 
-Nothing is mid-flight. PR #2 is pushed and green; the user reviews and merges on their own
-schedule.
+Nothing is mid-flight. The working tree is clean and `main` is pushed to the new remote.
 
 The obvious next target is **LLM latency**, now ~800–1100 ms of a ~1.1 s release→paste. Options:
 shorter prompt, streaming the completion, or a smaller model for short utterances. Start at
@@ -67,6 +69,7 @@ Smaller, well-defined pickups: `AGENTS.md`'s repo map does not list
 | Toolchain traps: Python interpreters, pnpm `allowBuilds`, `ELECTRON_RUN_AS_NODE`, koffi bundling | 001 (S-001) |
 | Merging with Aryan's `main`, what he added | 001 (S-004) |
 | Repo audit: real dependency list, doc accuracy, stub inventory | 001 (S-006) |
+| Repo split: what went where, the orphan commit, verification | 001 (S-008) |
 
 ## Open decisions
 
@@ -75,8 +78,8 @@ Smaller, well-defined pickups: `AGENTS.md`'s repo map does not list
 - **Whether to pre-warm the Soniox socket** before key-down, as the earlier Python prototype did.
   Currently it opens on key-down (~146 ms from India), hidden behind the user starting to speak.
   Not needed at current latency.
-- **`SONIOX_REGION` for the Mac side.** Aryan needs the India key and `SONIOX_REGION=in`, or his own
-  region's key. Not yet confirmed with him.
+- ~~**`SONIOX_REGION` for the Mac side.**~~ Dropped in S-008 — this was Aryan's to confirm, and the
+  repos have split. Still true for anyone on a non-India key: the key must match `SONIOX_REGION`.
 
 ## Ruled out
 
@@ -107,3 +110,4 @@ Smaller, well-defined pickups: `AGENTS.md`'s repo map does not list
 | S-005 | 2026-10-30 | English-in-Devanagari came out phonetic; prompt rewritten | 001 |
 | S-006 | 2026-10-30 | Deep repo read; context system set up | 001 |
 | S-007 | 2026-10-30 | Commands moved to workspace root so they are callable | 001 |
+| S-008 | 2026-10-30 | Pushed everything to Aryan's repo, cut it loose, fresh repo | 001 |
