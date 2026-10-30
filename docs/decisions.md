@@ -2,6 +2,19 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-10-30 — Gnani replaces Soniox for speech-to-text
+Gnani (`wss://api.vachana.ai/stt/v3/stream`) is now the only STT plug; the Soniox provider is gone. The
+switch was a project requirement, not a measurement, but the measurements that came with it shape the
+configuration. `prisma-v3.0` over the default `prisma-v2.5`: v3.0 writes Indian-accented English in Latin
+script, where v2.5 writes it in Devanagari — the input that produced "Pleez note dait" (see the prompt
+entry below), so the STT now avoids a problem the prompt had to repair. One locale, `hi-IN`, and
+deliberately not `indic-auto`: auto-detection guessed Telugu on a Hindi-English clip and returned Telugu
+script. `format=verbatim`, although `transliterate` returns Roman script directly and could in principle
+replace the LLM pass — it paraphrases ("मैं अभी वाइवा दे रहा हूँ" came back as "main abhi vaivada de
+raavu"), so the LLM still owns Hinglish. Dictionary words go in the `keyterms` header and measurably help:
+without them "what's up" came back as "WhatsApp" and "Bhavesh" as "भविष्य". The cost is the tail: Gnani
+finalises in ~250–500 ms against Soniox's ~50 ms, so release→paste grows by roughly that much.
+
 ### 2026-10-01 — Paste keeps the user's whole clipboard
 Paste goes through the clipboard, so we snapshot every format first (Electron 44's `clipboard.read()`,
 read eagerly because items are lazy) and restore it ~400 ms later. Restoring only text would erase an

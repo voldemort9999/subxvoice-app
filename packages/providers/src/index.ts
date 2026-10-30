@@ -1,23 +1,23 @@
 import { type LlmProvider, type SttProvider, SubxError } from "@subx/core";
 import { FakeLlm, FakeStt } from "@subx/core/fakes";
 import { OpenRouterLlm } from "./llm/openrouter";
-import { type SonioxRegion, SonioxStt } from "./stt/soniox";
+import { type GnaniFormat, type GnaniLanguage, GnaniStt } from "./stt/gnani";
 
 export interface ProviderConfig {
-  /** e.g. "soniox", "openrouter", "fake". */
+  /** e.g. "gnani", "openrouter", "fake". */
   id: string;
   model?: string;
   /** Short-lived token from our backend — never a raw vendor API key. */
   token?: string;
   baseUrl?: string;
-  /** Soniox data-residency region the token belongs to ("us" | "eu" | "jp" | "in"). */
-  region?: SonioxRegion;
+  /** Recognition locale for STT, e.g. "hi-IN". One only; Gnani takes no language list. */
+  language?: GnaniLanguage;
+  /** STT output style: "verbatim" | "transcribe" | "codemix" | "transliterate". */
+  format?: GnaniFormat;
   /** Pin the upstream provider where the vendor routes to several (OpenRouter). */
   only?: string[];
   /** Preferred upstream providers in order, with fallback (OpenRouter). */
   order?: string[];
-  /** Languages to bias STT toward (hints, not a restriction). Defaults to Hindi + English. */
-  languageHints?: string[];
 }
 
 // To add a vendor: create stt/<vendor>.ts (or llm/<vendor>.ts) implementing the
@@ -25,13 +25,13 @@ export interface ProviderConfig {
 
 export function createStt(config: ProviderConfig): SttProvider {
   switch (config.id) {
-    case "soniox":
-      return new SonioxStt({
-        token: requireToken(config, "Soniox"),
+    case "gnani":
+      return new GnaniStt({
+        token: requireToken(config, "Gnani"),
         model: config.model,
-        region: config.region,
         baseUrl: config.baseUrl,
-        languageHints: config.languageHints,
+        language: config.language,
+        format: config.format,
       });
     case "fake":
       return new FakeStt("hello from the fake speech-to-text provider");
@@ -64,9 +64,15 @@ function requireToken(config: ProviderConfig, name: string): string {
 
 export { OpenRouterLlm, type OpenRouterOptions } from "./llm/openrouter";
 export {
-  isSonioxRegion,
-  SONIOX_REGIONS,
-  type SonioxOptions,
-  type SonioxRegion,
-  SonioxStt,
-} from "./stt/soniox";
+  GNANI_FORMATS,
+  GNANI_LANGUAGES,
+  GNANI_STT_URL,
+  type GnaniFormat,
+  type GnaniLanguage,
+  type GnaniOptions,
+  GnaniStt,
+  headerSafeTerms,
+  isGnaniFormat,
+  isGnaniLanguage,
+  toLocale,
+} from "./stt/gnani";

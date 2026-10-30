@@ -104,13 +104,13 @@ describe("createWorkflow", () => {
   it("keeps the recording and explains when speech-to-text is off", async () => {
     const { workflow, history, saved } = build({
       withPipeline: false,
-      problems: ["Speech-to-text is off: SONIOX_API_KEY is not set."],
+      problems: ["Speech-to-text is off: GNANI_API_KEY is not set."],
     });
     const run = await workflow.open("exact");
     const message = await run.finish(clip);
     await Promise.resolve();
 
-    expect(message).toBe("Speech-to-text is off: SONIOX_API_KEY is not set.");
+    expect(message).toBe("Speech-to-text is off: GNANI_API_KEY is not set.");
     expect(history.records).toHaveLength(1);
     expect(history.records[0]?.finalText).toBe("");
     expect(saved).toHaveLength(1);

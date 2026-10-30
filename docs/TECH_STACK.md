@@ -63,7 +63,7 @@ forms), Recharts (real charts), wavesurfer.js (waveforms), TanStack Virtual (ver
 ## Speech and language engines
 | Part | Tech |
 |---|---|
-| Speech-to-text | Soniox real-time (`stt-rt-v5`), streamed over a websocket while the user speaks; Hindi + English hints |
+| Speech-to-text | Gnani realtime (`prisma-v3.0`), streamed over a websocket while the user speaks; `hi-IN` covers Hindi + English |
 | Rewriting / Roman script | OpenRouter → `openai/gpt-oss-120b`, routed to Cerebras first, Groq as fallback |
 | Keys | `.env` in development (main process only, never packaged); backend tokens in production |
 
@@ -143,7 +143,7 @@ Nothing is built for this now. The design just keeps it possible:
 2. ✅ Mac: fn hotkey + native mic (Swift helper), recording pill, tray, dashboard
 3. ✅ Local history (with audio playback) + dictionary
 4. ✅ Website with download buttons
-5. ✅ Speech-to-text (Soniox, streaming) → paste at the cursor, on Mac and Windows
+5. ✅ Speech-to-text (Gnani, streaming) → paste at the cursor, on Mac and Windows
 6. ✅ Windows hotkey + paste; Roman-script output via OpenRouter; Settings (hotkey, script, mic)
 7. ⏳ Style mode (LLM), voice commands
 8. ⏳ Backend (login, sync, stats), installers, signing, auto-update

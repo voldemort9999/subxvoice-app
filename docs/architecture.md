@@ -33,7 +33,7 @@ Every dictation is saved to local history: audio, text, app and per-stage timing
 
 | Interface | File | Plugs today | Later |
 |---|---|---|---|
-| `SttProvider` | `contracts/stt.ts` | `soniox` (streaming), fake | Others via benchmark, local whisper.cpp, our own model |
+| `SttProvider` | `contracts/stt.ts` | `gnani` (streaming), fake | Others via benchmark, local whisper.cpp, our own model |
 | `LlmProvider` | `contracts/llm.ts` | `openrouter`, fake | Our own model |
 | `Platform` (hotkey, microphone, inserter, permissions, context, desktop) | `contracts/platform.ts` | `platform-mac`: hotkey, mic, paste, permissions via the Swift helper. `platform-win`: hotkey + paste via koffi, permissions, open URL | Active-app context, focused text; C# helper on Windows if needed |
 | `Tool` + `ToolRegistry` | `contracts/tool.ts`, `tools.ts` | — | built-in commands, OS actions, MCP tools |

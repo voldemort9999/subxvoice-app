@@ -116,7 +116,7 @@ per line over stdin/stdout, see `native/mac-helper/Sources/main.swift` and
 
 ## Environment variables and API keys
 
-- Copy `.env.example` to `.env` at the repo root and fill in `SONIOX_API_KEY` (speech-to-text) and
+- Copy `.env.example` to `.env` at the repo root and fill in `GNANI_API_KEY` (speech-to-text) and
   `OPENROUTER_API_KEY` (Roman script / rewriting). Restart the app after changing it; Settings → Engines
   shows whether each one is ready. Without keys the app still records and saves audio.
 - Only `apps/desktop/src/main/providers.ts` reads `.env`, and only when the app is **not packaged**.

@@ -31,7 +31,7 @@ If the desktop app opens as plain Node inside a VS Code terminal, run `unset ELE
 |---|---|---|
 | Hold hotkey → record | ✅ fn (🌐) by default, via the Swift helper | ✅ Ctrl + Win by default (key-state polling) |
 | Microphone | ✅ native, on only while the key is held | ✅ Web Audio, with a mic picker in Settings |
-| Speech-to-text, streamed while you speak | ✅ Soniox (needs `SONIOX_API_KEY`) | ✅ same |
+| Speech-to-text, streamed while you speak | ✅ Gnani (needs `GNANI_API_KEY`) | ✅ same |
 | Text pasted at the cursor, user's clipboard restored | ✅ ⌘V via the Swift helper | ✅ Ctrl+V via Win32 `SendInput` |
 | Hindi etc. written in Roman letters (Hinglish) or native script | ✅ OpenRouter (needs `OPENROUTER_API_KEY`) | ✅ same |
 | Always-on-screen pill: live waveform, then the words as heard | ✅ | ✅ |

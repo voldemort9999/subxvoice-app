@@ -88,7 +88,7 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
       </Row>
 
       <Row title="Engines">
-        <EngineStatus ready={info?.providers.stt} name="Speech-to-text" env="SONIOX_API_KEY" />
+        <EngineStatus ready={info?.providers.stt} name="Speech-to-text" env="GNANI_API_KEY" />
         <EngineStatus
           ready={info?.providers.llm}
           name="Rewriting and Roman script"

@@ -36,7 +36,7 @@ One dictation, end to end:
 ```
 hotkey down ─► DictationController.start ─► workflow.open ─► Pipeline.open (STT socket opens now)
                                                           └─► mic.start, chunks pushed live
-hotkey up   ─► mic.stop ─► session.finish ─► Soniox finalize ─► dictionary rules ─► router
+hotkey up   ─► mic.stop ─► session.finish ─► Gnani commit ─► dictionary rules ─► router
                         ─► LLM (script / style) ─► inserter (clipboard + Ctrl/⌘V) ─► history
                                                                       audio saved after the paste
 ```
@@ -69,8 +69,13 @@ unit-tested without a microphone.
 
 - `ELECTRON_RUN_AS_NODE=1` leaks in from VS Code terminals and makes Electron run as plain Node
   (`electron.app` is undefined). `unset ELECTRON_RUN_AS_NODE` before `pnpm dev:desktop`.
-- A **Soniox key is bound to its project's region** and returns `401` on any other region's
-  endpoint. `SONIOX_REGION` in `.env` must match the key. Default is `in`.
+- **Gnani configures the session in the websocket upgrade headers**, not in a message after
+  connecting. Node's and Electron's `WebSocket` (undici) takes a `{ headers }` option; the DOM type
+  does not describe it. A header value above U+00FF throws, so Devanagari dictionary terms cannot
+  be sent as `keyterms` and are dropped.
+- **Gnani answers a `commit` with nothing to flush with silence** — no ack, no empty transcript. So
+  `finish()` waits only when an utterance is actually open, tracked by `utterance_id`. Waiting
+  unconditionally stalls every dictation that ended in a pause.
 - Electron 44's clipboard API is **promise-based**; `clipboard.readText()` returns a Promise.
 - `pnpm-workspace.yaml` → `allowBuilds` gates install scripts. `koffi: true` is required or the
   native binding never unpacks and the app dies at import.
@@ -79,8 +84,8 @@ unit-tested without a microphone.
 
 ## Secrets
 
-`.env` at the repo root, gitignored, never committed: `SONIOX_API_KEY`, `SONIOX_REGION`,
-`OPENROUTER_API_KEY`. `.env.example` documents them. This is a development bridge only — AGENTS.md
+`.env` at the repo root, gitignored, never committed: `GNANI_API_KEY`, `OPENROUTER_API_KEY`,
+and the optional `GNANI_MODEL`, `GNANI_LANGUAGE`, `GNANI_FORMAT`. `.env.example` documents them. This is a development bridge only — AGENTS.md
 rule 3 still stands, and the backend will hand out short-lived tokens later.
 
 ## Context system

@@ -5,7 +5,7 @@
 // repo root keeps development working. Only the token source changes later — nothing else.
 import { join } from "node:path";
 import type { LlmProvider, SttProvider } from "@subx/core";
-import { createLlm, createStt, isSonioxRegion } from "@subx/providers";
+import { createLlm, createStt, isGnaniFormat, isGnaniLanguage } from "@subx/providers";
 import { app } from "electron";
 
 export interface Engines {
@@ -33,22 +33,33 @@ export function createEngines(): Engines {
   let stt: SttProvider | undefined;
   let llm: LlmProvider | undefined;
 
-  const sttToken = process.env.SONIOX_API_KEY?.trim();
+  const sttToken = process.env.GNANI_API_KEY?.trim();
   if (sttToken) {
-    // A Soniox key is bound to its project's region and is rejected elsewhere, so the region must
-    // match the key. The India region connects far faster from India (see the Soniox provider).
-    const regionEnv = process.env.SONIOX_REGION?.trim().toLowerCase();
-    if (regionEnv && !isSonioxRegion(regionEnv)) {
-      problems.push(`Ignoring SONIOX_REGION="${regionEnv}": expected us, eu, jp or in.`);
+    // Both of these are user input from .env, so a typo is reported rather than silently sent to
+    // the service — which would reject the whole session over one bad header.
+    const languageEnv = process.env.GNANI_LANGUAGE?.trim();
+    if (languageEnv && !isGnaniLanguage(languageEnv)) {
+      problems.push(`Ignoring GNANI_LANGUAGE="${languageEnv}": expected a locale such as hi-IN or en-IN.`);
     }
-    const region = regionEnv && isSonioxRegion(regionEnv) ? regionEnv : "in";
+    const formatEnv = process.env.GNANI_FORMAT?.trim();
+    if (formatEnv && !isGnaniFormat(formatEnv)) {
+      problems.push(
+        `Ignoring GNANI_FORMAT="${formatEnv}": expected verbatim, transcribe, codemix or transliterate.`,
+      );
+    }
     try {
-      stt = createStt({ id: "soniox", token: sttToken, model: process.env.SONIOX_MODEL, region });
+      stt = createStt({
+        id: "gnani",
+        token: sttToken,
+        model: process.env.GNANI_MODEL,
+        language: languageEnv && isGnaniLanguage(languageEnv) ? languageEnv : undefined,
+        format: formatEnv && isGnaniFormat(formatEnv) ? formatEnv : undefined,
+      });
     } catch (error) {
       problems.push(describe("Speech-to-text", error));
     }
   } else {
-    problems.push("Speech-to-text is off: SONIOX_API_KEY is not set.");
+    problems.push("Speech-to-text is off: GNANI_API_KEY is not set.");
   }
 
   const llmToken = process.env.OPENROUTER_API_KEY?.trim();

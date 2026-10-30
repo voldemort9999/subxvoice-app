@@ -8,8 +8,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createLlm, createStt } from "./index";
 
-const sonioxKey = process.env.SONIOX_API_KEY?.trim();
-const sonioxRegion = (process.env.SONIOX_REGION?.trim().toLowerCase() || "in") as "us" | "eu" | "jp" | "in";
+const gnaniKey = process.env.GNANI_API_KEY?.trim();
 const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
 const audioPath = process.env.SUBX_TEST_AUDIO?.trim();
 
@@ -31,10 +30,11 @@ function readWav(path: string): Int16Array {
   throw new Error(`No data chunk in ${path}`);
 }
 
-describe.skipIf(!sonioxKey)("Soniox (live)", () => {
+describe.skipIf(!gnaniKey)("Gnani (live)", () => {
   it("connects, authenticates and finishes cleanly", async () => {
-    const stt = createStt({ id: "soniox", token: sonioxKey, region: sonioxRegion });
-    // Half a second of silence: no words expected, but the whole protocol is exercised.
+    const stt = createStt({ id: "gnani", token: gnaniKey });
+    // Half a second of silence: no words expected, but the handshake, framing and the commit that
+    // has nothing to flush are all exercised — and that last case must not stall.
     const transcript = await stt.transcribe(
       { samples: new Int16Array(SAMPLE_RATE / 2), sampleRate: SAMPLE_RATE },
       { vocabulary: [] },
@@ -43,7 +43,7 @@ describe.skipIf(!sonioxKey)("Soniox (live)", () => {
   }, 30000);
 
   it("rejects a bad key instead of hanging", async () => {
-    const stt = createStt({ id: "soniox", token: "snx_not_a_real_key" });
+    const stt = createStt({ id: "gnani", token: "vach_not_a_real_key" });
     await expect(
       stt.transcribe({ samples: new Int16Array(1600), sampleRate: SAMPLE_RATE }, { vocabulary: [] }),
     ).rejects.toThrow();
@@ -52,10 +52,12 @@ describe.skipIf(!sonioxKey)("Soniox (live)", () => {
   it.skipIf(!audioPath)(
     "transcribes real speech",
     async () => {
-      const stt = createStt({ id: "soniox", token: sonioxKey, region: sonioxRegion });
+      const stt = createStt({ id: "gnani", token: gnaniKey });
       const transcript = await stt.transcribe(
         { samples: readWav(audioPath as string), sampleRate: SAMPLE_RATE },
-        { vocabulary: [] },
+        // Names and jargon are what recognition gets wrong, and these measurably help:
+        // without them "what's up" came back as "WhatsApp" and "Bhavesh" as "भविष्य".
+        { vocabulary: ["Bhavesh", "OJT", "viva"] },
       );
       console.log("heard:", transcript.text);
       expect(transcript.text.length).toBeGreaterThan(5);
