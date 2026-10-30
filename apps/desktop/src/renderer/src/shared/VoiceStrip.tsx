@@ -2,9 +2,11 @@ import type { SessionRecord } from "@subx/core";
 import { DAY_MS, formatSpeechTotal, startOfDay } from "./format";
 
 const DAYS = 14;
-const MAX_BAR_PX = 96;
 
-/** Speaking time per day for the last two weeks, drawn like a waveform. */
+/**
+ * Speaking time per day, mirrored around a centre line so it reads as a waveform rather than a bar
+ * chart — the one piece of decoration that is actually about the subject.
+ */
 export function VoiceStrip({ records }: { records: SessionRecord[] }) {
   const today = startOfDay(Date.now());
   const days = Array.from({ length: DAYS }, (_, index) => {
@@ -18,25 +20,34 @@ export function VoiceStrip({ records }: { records: SessionRecord[] }) {
 
   return (
     <figure>
-      <div className="flex h-28 items-end gap-2" role="img" aria-label="Speaking time per day, last 14 days">
-        {days.map(({ start, ms }) => (
-          <div
-            key={start}
-            className="flex flex-1 flex-col items-center justify-end"
-            title={formatSpeechTotal(ms)}
-          >
+      <div
+        className="flex h-24 items-center gap-2"
+        role="img"
+        aria-label="Speaking time per day, last 14 days"
+      >
+        {days.map(({ start, ms }) => {
+          const height = ms ? Math.max(8, (ms / max) * 100) : 2;
+          return (
             <div
-              className={`w-full max-w-5 rounded-full ${ms ? "bg-accent" : "bg-line"}`}
-              style={{ height: ms ? Math.max(6, (ms / max) * MAX_BAR_PX) : 3 }}
-            />
-          </div>
-        ))}
+              key={start}
+              className="flex h-full flex-1 items-center justify-center"
+              title={`${new Date(start).toLocaleDateString()}: ${formatSpeechTotal(ms)}`}
+            >
+              <div
+                className={`w-full max-w-4 rounded-full ${
+                  ms ? (start === today ? "bg-accent" : "bg-speech") : "bg-line-soft"
+                }`}
+                style={{ height: `${height}%` }}
+              />
+            </div>
+          );
+        })}
       </div>
-      <div className="mt-2 flex gap-2 text-xs text-muted">
+      <div className="mt-2 flex gap-2 text-xs">
         {days.map(({ start }) => (
           <span
             key={start}
-            className={`flex-1 text-center ${start === today ? "font-semibold text-ink" : ""}`}
+            className={`flex-1 text-center ${start === today ? "font-semibold text-ink" : "text-faint"}`}
           >
             {new Date(start).toLocaleDateString([], { weekday: "narrow" })}
           </span>

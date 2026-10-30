@@ -76,3 +76,33 @@ export function useMicrophones(): MicrophoneOption[] {
   }, []);
   return options;
 }
+
+export type Theme = "dark" | "light";
+
+const THEME_KEY = "subx.theme";
+
+/**
+ * Dark by default: this window sits open beside whatever is being dictated into, and a bright
+ * panel there is the thing people turn off first. The choice is per machine, so it lives in
+ * localStorage rather than in settings.json that syncs later.
+ */
+export function useTheme(): [Theme, (theme: Theme) => void] {
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Private windows and cleared site data: the theme still applies for this run.
+    }
+  }, [theme]);
+
+  return [theme, setTheme];
+}

@@ -1,30 +1,57 @@
-import { TITLE_BAR_DRAG } from "@platform/Chrome";
+﻿import { TITLE_BAR_DRAG } from "@platform/Chrome";
 import { useState } from "react";
+import { DashboardPage } from "./pages/DashboardPage";
 import { DictionaryPage } from "./pages/DictionaryPage";
 import { HistoryPage } from "./pages/HistoryPage";
-import { HomePage } from "./pages/HomePage";
+import { InsightsPage } from "./pages/InsightsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { hotkeyLabel } from "./shared/format";
-import { useAppInfo } from "./shared/hooks";
+import { useAppInfo, useTheme } from "./shared/hooks";
+import { MoonIcon, SunIcon } from "./shared/icons";
 import { type PageId, Sidebar } from "./shared/Sidebar";
+import { IconButton } from "./shared/ui";
+
+const TITLES: Record<PageId, string> = {
+  dashboard: "Dashboard",
+  insights: "Insights",
+  history: "History",
+  dictionary: "Dictionary",
+  settings: "Settings",
+};
 
 export function App() {
-  const [page, setPage] = useState<PageId>("home");
+  const [page, setPage] = useState<PageId>("dashboard");
+  const [theme, setTheme] = useTheme();
   const info = useAppInfo();
   const hotkey = hotkeyLabel(info?.hotkeys[0]?.keys);
+  const ready = Boolean(info?.providers.stt);
 
   return (
-    <div className="flex h-full">
-      <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} />
-      <main className="flex-1 overflow-y-auto">
-        <div className={`sticky top-0 z-10 h-10 bg-canvas ${TITLE_BAR_DRAG}`} />
-        <div className="mx-auto max-w-3xl px-10 pb-12">
-          {page === "home" && <HomePage hotkey={hotkey} onNavigate={setPage} />}
-          {page === "history" && <HistoryPage hotkey={hotkey} />}
-          {page === "dictionary" && <DictionaryPage />}
-          {page === "settings" && <SettingsPage info={info} />}
-        </div>
-      </main>
+    <div className="flex h-full bg-canvas">
+      <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} ready={ready} />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header
+          className={`flex h-12 shrink-0 items-center justify-between gap-4 border-b border-line px-6 ${TITLE_BAR_DRAG}`}
+        >
+          <h1 className="text-[15px] font-semibold tracking-tight">{TITLES[page]}</h1>
+          <IconButton
+            icon={theme === "dark" ? SunIcon : MoonIcon}
+            label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          />
+        </header>
+
+        <main className="scroll-area flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-5xl px-6 py-6">
+            {page === "dashboard" && <DashboardPage hotkey={hotkey} onNavigate={setPage} />}
+            {page === "insights" && <InsightsPage hotkey={hotkey} />}
+            {page === "history" && <HistoryPage hotkey={hotkey} />}
+            {page === "dictionary" && <DictionaryPage />}
+            {page === "settings" && <SettingsPage info={info} />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

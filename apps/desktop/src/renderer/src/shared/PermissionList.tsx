@@ -33,7 +33,7 @@ export function PermissionList() {
           {(state === "denied" || state === "not_asked") && (
             <button
               type="button"
-              className="shrink-0 rounded-md bg-accent px-3 py-1.5 font-medium text-white hover:opacity-90"
+              className="shrink-0 rounded-lg bg-accent px-3 py-1.5 font-medium text-accent-ink hover:opacity-90"
               onClick={() =>
                 state === "not_asked"
                   ? window.subx.permissions.request(kind)

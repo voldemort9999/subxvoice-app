@@ -15,6 +15,26 @@ export function formatSpeechTotal(ms: number): string {
   return `${minutes < 10 ? minutes.toFixed(1) : Math.round(minutes)} minutes`;
 }
 
+/**
+ * A span of time as a person would say it: "4m", "1h 12m", "2 days". Used for totals like time
+ * saved, where minutes stop being meaningful once there are hours of them.
+ */
+export function formatSpan(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 1) return "under a minute";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    const rest = minutes % 60;
+    return rest ? `${hours}h ${rest}m` : `${hours}h`;
+  }
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
+/** Big counts stay readable: 1200 → "1,200". */
+export const formatCount = (value: number) => value.toLocaleString();
+
 export function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }

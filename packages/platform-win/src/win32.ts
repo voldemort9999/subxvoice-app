@@ -21,13 +21,32 @@ const INPUT = koffi.struct("INPUT", {
   _pad: koffi.array("uint8", 8),
 });
 
-// user32.dll is loaded on first use, not at import: the desktop app imports this package on every OS,
-// and loading a Windows DLL at import time crashes it on macOS.
+// The DLLs are loaded on first use, not at import: the desktop app imports this package on every
+// OS, and loading a Windows DLL at import time crashes it on macOS.
 function bind() {
   const lib = koffi.load("user32.dll");
+  const kernel = koffi.load("kernel32.dll");
   return {
     getAsyncKeyState: lib.func("__stdcall", "GetAsyncKeyState", "int16", ["int"]),
     sendInput: lib.func("__stdcall", "SendInput", "uint32", ["uint32", koffi.pointer(INPUT), "int"]),
+    getForegroundWindow: lib.func("__stdcall", "GetForegroundWindow", "void *", []),
+    getWindowTextW: lib.func("__stdcall", "GetWindowTextW", "int", [
+      "void *",
+      koffi.out(koffi.pointer("uint16")),
+      "int",
+    ]),
+    getWindowThreadProcessId: lib.func("__stdcall", "GetWindowThreadProcessId", "uint32", [
+      "void *",
+      koffi.out(koffi.pointer("uint32")),
+    ]),
+    openProcess: kernel.func("__stdcall", "OpenProcess", "void *", ["uint32", "int", "uint32"]),
+    queryFullProcessImageNameW: kernel.func("__stdcall", "QueryFullProcessImageNameW", "int", [
+      "void *",
+      "uint32",
+      koffi.out(koffi.pointer("uint16")),
+      koffi.inout(koffi.pointer("uint32")),
+    ]),
+    closeHandle: kernel.func("__stdcall", "CloseHandle", "int", ["void *"]),
   };
 }
 
@@ -70,6 +89,53 @@ export function sendChord(modifiers: number[], vk: number): boolean {
     ...[...modifiers].reverse().map((mod) => key(mod, true)),
   ];
   return win32().sendInput(events.length, events, koffi.sizeof(INPUT)) === events.length;
+}
+
+/** Windows writes strings as UTF-16; koffi hands them back as raw code units. */
+const decodeWide = (buffer: Uint16Array, length: number) =>
+  Buffer.from(buffer.buffer, buffer.byteOffset, length * 2).toString("utf16le");
+
+/** Enough for any window title; longer ones are simply cut off. */
+const TITLE_CHARS = 512;
+const PATH_CHARS = 1024;
+
+/** Lets us read another process's image name without the right to read its memory. */
+const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+/**
+ * The window the user was typing in, read at key-down. Returns null when there is no foreground
+ * window (the desktop is focused, or a secure-attention screen is up).
+ */
+export function foregroundWindow(): { title: string; exePath: string } | null {
+  const { getForegroundWindow, getWindowTextW, getWindowThreadProcessId } = win32();
+  const handle = getForegroundWindow();
+  if (!handle) return null;
+
+  const titleBuffer = new Uint16Array(TITLE_CHARS);
+  const titleLength = getWindowTextW(handle, titleBuffer, TITLE_CHARS);
+  const title = titleLength > 0 ? decodeWide(titleBuffer, titleLength) : "";
+
+  const pidOut = new Uint32Array(1);
+  getWindowThreadProcessId(handle, pidOut);
+  const pid = pidOut[0];
+  if (!pid) return { title, exePath: "" };
+
+  return { title, exePath: processImagePath(pid) };
+}
+
+/** "" when the process is gone or more privileged than ours, which is not worth reporting. */
+function processImagePath(pid: number): string {
+  const { openProcess, queryFullProcessImageNameW, closeHandle } = win32();
+  const process = openProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+  if (!process) return "";
+  try {
+    const pathBuffer = new Uint16Array(PATH_CHARS);
+    const size = new Uint32Array([PATH_CHARS]);
+    if (!queryFullProcessImageNameW(process, 0, pathBuffer, size)) return "";
+    return decodeWide(pathBuffer, size[0] ?? 0);
+  } finally {
+    closeHandle(process);
+  }
 }
 
 const MODIFIERS = [VK.control, VK.shift, VK.alt, VK.lwin, VK.rwin];

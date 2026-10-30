@@ -1,8 +1,8 @@
 // Windows-only window chrome. Same exports as platform/mac/Chrome.tsx.
 
-/** Windows keeps its native title bar, so the sidebar starts with the app name. */
+/** Windows keeps its native title bar, so the sidebar only needs breathing room above the brand. */
 export function SidebarTop() {
-  return <p className="px-2.5 pt-4 pb-3 text-sm font-semibold">SUBXVoice</p>;
+  return <div className="h-3 shrink-0" />;
 }
 
 /** Windows has a native title bar; the content area does not need to drag the window. */

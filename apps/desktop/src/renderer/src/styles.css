@@ -1,42 +1,83 @@
 @import "tailwindcss";
 
-/* Design tokens. Cobalt is reserved for voice: waveforms, play buttons, the voice strip. */
-:root {
-  --canvas: #ffffff;
-  --sidebar: #f2f3f5;
-  --ink: #1d1f23;
-  --muted: #6e737b;
-  --line: #e3e5e8;
-  --accent: #3346d3;
-  --accent-soft: #e8ebfc;
-  --danger: #c8322f;
-  color-scheme: light dark;
+/*
+ * Design tokens.
+ *
+ * Dark is the default because this window sits open beside whatever the user is dictating into.
+ * The dark base is indigo-tinted rather than neutral, so the violet accent belongs to the surface
+ * it sits on instead of glowing off a flat black.
+ *
+ * Two colours carry meaning and are not used for decoration:
+ *   --accent  the product acting — the hotkey, the primary action, the current page
+ *   --speech  the user's voice — waveforms, speaking time, playback
+ */
+:root,
+:root[data-theme="dark"] {
+  --canvas: #0c0d13;
+  --surface: #14161f;
+  --raised: #1c1f2b;
+  --line: #262a38;
+  --line-soft: #1e2130;
+  --ink: #e9eaf2;
+  --muted: #8b90a5;
+  --faint: #5e637a;
+  --accent: #6d5ef8;
+  --accent-ink: #ffffff;
+  --accent-soft: #6d5ef826;
+  --speech: #3fd0c9;
+  --speech-soft: #3fd0c924;
+  --warn: #f0b24a;
+  --danger: #f2685e;
+  --danger-soft: #f2685e22;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #1e1f22;
-    --sidebar: #26272b;
-    --ink: #ecedef;
-    --muted: #9a9ea6;
-    --line: #34363b;
-    --accent: #7d8bff;
-    --accent-soft: #2a2f52;
-    --danger: #ff6b66;
-  }
+:root[data-theme="light"] {
+  --canvas: #f7f7fb;
+  --surface: #ffffff;
+  --raised: #f1f2f7;
+  --line: #e2e4ed;
+  --line-soft: #eceef4;
+  --ink: #15171f;
+  --muted: #5f657a;
+  --faint: #9aa0b4;
+  --accent: #5546e0;
+  --accent-ink: #ffffff;
+  --accent-soft: #5546e014;
+  --speech: #119b94;
+  --speech-soft: #119b9418;
+  --warn: #b5760c;
+  --danger: #cf3b31;
+  --danger-soft: #cf3b3114;
+  color-scheme: light;
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
-  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
-  --color-line: var(--line);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-speech: var(--speech);
+  --color-speech-soft: var(--speech-soft);
+  --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
   /* system-ui = SF Pro on Mac, Segoe UI on Windows — native feel on both. */
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  /*
+   * Transcripts are the one thing here that is routinely not Latin: Hindi comes back in
+   * Devanagari before the transliteration pass. These faces are the ones each OS actually ships
+   * for Devanagari, named explicitly so the script gets a designed face rather than a fallback.
+   */
+  --font-voice: "Nirmala UI", "Kohinoor Devanagari", "Noto Sans Devanagari", var(--font-sans);
 }
 
 html,
@@ -59,6 +100,32 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Panels are separated by a hairline and a tint shift, not by a drop shadow under everything. */
+@utility panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+/* Numbers that change in place must not reflow the row they sit in. */
+@utility figure-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Transcript text: the product's own output, so it gets room to breathe. */
+@utility voice-text {
+  font-family: var(--font-voice);
+  line-height: 1.55;
+  user-select: text;
+}
+
+.scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
