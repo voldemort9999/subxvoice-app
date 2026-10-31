@@ -1,5 +1,6 @@
 import type { LlmProvider, LlmRequest, LlmResponse } from "@subx/core";
 import { SubxError } from "@subx/core";
+import { resolveToken, type TokenSource } from "../stt/gnani";
 
 const DEFAULT_URL = "https://openrouter.ai/api/v1/chat/completions";
 /**
@@ -12,8 +13,8 @@ const DEFAULT_MAX_TOKENS = 1200;
 const TIMEOUT_MS = 20000;
 
 export interface OpenRouterOptions {
-  /** Short-lived token from our backend, or a dev key from the environment. */
-  token: string;
+  /** The user's session, read fresh for every request — it expires while the app is open. */
+  token: TokenSource;
   model?: string;
   baseUrl?: string;
   /** Restrict routing to only these upstream providers. */
@@ -45,7 +46,7 @@ export class OpenRouterLlm implements LlmProvider {
     const response = await fetch(this.options.baseUrl ?? DEFAULT_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.options.token}`,
+        Authorization: `Bearer ${await resolveToken(this.options.token)}`,
         "Content-Type": "application/json",
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),

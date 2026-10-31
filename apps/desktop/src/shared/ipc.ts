@@ -11,6 +11,11 @@ import type {
 
 export const IPC = {
   appInfo: "app:info",
+  authState: "auth:state",
+  authSignIn: "auth:sign-in",
+  authSignUp: "auth:sign-up",
+  authSignOut: "auth:sign-out",
+  authChanged: "auth:changed",
   openRecordingsFolder: "app:open-recordings-folder",
   permissionList: "permissions:list",
   permissionRequest: "permissions:request",
@@ -64,6 +69,12 @@ export interface AppSettings {
   microphoneId: string;
 }
 
+/** Who is signed in. The app needs an account before it can dictate. */
+export interface AccountState {
+  email: string | null;
+  signedIn: boolean;
+}
+
 export interface MicrophoneOption {
   id: string;
   label: string;
@@ -87,6 +98,13 @@ export type MicCommand = "start" | "stop";
 /** Exposed to the UI as `window.subx` by the preload script. */
 export interface SubxApi {
   os: "mac" | "win";
+  auth: {
+    state(): Promise<AccountState>;
+    signIn(email: string, password: string): Promise<void>;
+    signUp(email: string, password: string): Promise<void>;
+    signOut(): Promise<void>;
+    onChanged(listener: (state: AccountState) => void): () => void;
+  };
   app: {
     info(): Promise<AppInfo>;
     openRecordingsFolder(): Promise<void>;

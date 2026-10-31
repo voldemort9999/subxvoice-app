@@ -1,6 +1,12 @@
 import type { SessionRecord } from "@subx/core";
 import { useCallback, useEffect, useState } from "react";
-import type { AppInfo, AppSettings, MicrophoneOption, PermissionStatus } from "../../../shared/ipc";
+import type {
+  AccountState,
+  AppInfo,
+  AppSettings,
+  MicrophoneOption,
+  PermissionStatus,
+} from "../../../shared/ipc";
 
 /** All recordings, newest first. `null` while loading. Refreshes when a new one is saved. */
 export function useHistory(): SessionRecord[] | null {
@@ -105,4 +111,14 @@ export function useTheme(): [Theme, (theme: Theme) => void] {
   }, [theme]);
 
   return [theme, setTheme];
+}
+
+/** Who is signed in. `null` while the main process is still restoring the saved session. */
+export function useAccount(): AccountState | null {
+  const [state, setState] = useState<AccountState | null>(null);
+  useEffect(() => {
+    void window.subx.auth.state().then(setState);
+    return window.subx.auth.onChanged(setState);
+  }, []);
+  return state;
 }

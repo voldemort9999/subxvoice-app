@@ -16,6 +16,7 @@ import {
   type MicrophoneOption,
   type PermissionStatus,
 } from "../shared/ipc";
+import { Account } from "./auth";
 import { appIcon } from "./brand";
 import { DictationController } from "./dictation";
 import { nativeMic, PillMic } from "./mic";
@@ -32,7 +33,9 @@ const HOTKEY_RETRY_MS = 3000;
 
 loadDevEnv();
 const platform = createPlatform();
-const engines = createEngines();
+// Built in start(), because the account they depend on needs the app to be ready first.
+let account: Account;
+let engines: ReturnType<typeof createEngines> = { problems: [] };
 /** Reported by the renderer, which is the only side with MediaDevices. */
 let microphones: MicrophoneOption[] = [];
 let mainWindow: BrowserWindow | null = null;
@@ -67,6 +70,14 @@ function openMainWindow(): void {
 
 function notifyHistoryChanged(): void {
   mainWindow?.webContents.send(IPC.historyChanged);
+}
+
+/** Credentials arrive from the renderer, so they are checked before they reach the network. */
+function asText(value: unknown, field: string): string {
+  if (typeof value !== "string" || !value.trim() || value.length > 320) {
+    throw new Error(`Enter a valid ${field}.`);
+  }
+  return value.trim();
 }
 
 function assertPermissionKind(kind: unknown): PermissionKind {
@@ -108,6 +119,11 @@ function assertSettings(value: unknown, accepts: (keys: string) => boolean): Par
 async function start(): Promise<void> {
   const dataDir = app.getPath("userData");
   await mkdir(dataDir, { recursive: true });
+
+  account = new Account();
+  // Signing in once should last; a session that no longer refreshes just asks again.
+  await account.restore();
+  engines = createEngines(account);
   const history = new JsonHistoryStore(join(dataDir, "history.json"));
   const dictionary = new JsonDictionaryStore(join(dataDir, "dictionary.json"));
   const settings = new JsonSettingsStore<AppSettings>(join(dataDir, "settings.json"), {
@@ -122,6 +138,20 @@ async function start(): Promise<void> {
     if (!hotkey || !platform.hotkey.accepts(hotkey)) return platform.hotkey.defaultBindings();
     return [{ keys: hotkey, mode: "exact" }];
   };
+
+  ipcMain.handle(IPC.authState, () => account.state());
+  ipcMain.handle(IPC.authSignIn, (_event, email: unknown, password: unknown) =>
+    account.signIn(asText(email, "email"), asText(password, "password")),
+  );
+  ipcMain.handle(IPC.authSignUp, (_event, email: unknown, password: unknown) =>
+    account.signUp(asText(email, "email"), asText(password, "password")),
+  );
+  ipcMain.handle(IPC.authSignOut, () => account.signOut());
+  account.onChanged((state) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send(IPC.authChanged, state);
+    }
+  });
 
   ipcMain.handle(
     IPC.appInfo,
@@ -266,7 +296,9 @@ app.whenReady().then(() => {
   // feature this app has. macOS keeps its menu: it is the system menu bar, and dropping it would
   // take the app menu and the standard editing shortcuts with it.
   if (process.platform !== "darwin") Menu.setApplicationMenu(null);
-  void start();
+  // A swallowed startup failure looks exactly like a window that never opens, which is not a
+  // thing anyone can debug from the outside.
+  start().catch((error) => console.error("SUBXVoice failed to start:", error));
   app.on("activate", openMainWindow);
 });
 

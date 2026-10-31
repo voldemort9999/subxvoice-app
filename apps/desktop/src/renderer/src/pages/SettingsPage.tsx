@@ -2,7 +2,7 @@ import { HotkeyNote, MicrophoneNote, PermissionsIntro } from "@platform/Chrome";
 import type { AppInfo } from "../../../shared/ipc";
 import { hotkeyLabel } from "../shared/format";
 import { HotkeyRecorder } from "../shared/HotkeyRecorder";
-import { useMicrophones, useSettings } from "../shared/hooks";
+import { useAccount, useMicrophones, useSettings } from "../shared/hooks";
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
 import { Button, Card, Field, Select } from "../shared/ui";
@@ -23,6 +23,7 @@ const SCRIPTS = [
 export function SettingsPage({ info }: { info: AppInfo | null }) {
   const [settings, update] = useSettings();
   const microphones = useMicrophones();
+  const account = useAccount();
   const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "";
 
   return (
@@ -97,19 +98,20 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
         <PermissionList />
       </Card>
 
-      <Card title="Engines">
-        <div className="space-y-2.5">
-          <EngineStatus ready={info?.providers.stt} name="Speech to text" env="GNANI_API_KEY" />
-          <EngineStatus
-            ready={info?.providers.llm}
-            name="Rewriting and Roman script"
-            env="OPENROUTER_API_KEY"
-          />
+      <Card title="Account">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-medium">{account?.email ?? "Not signed in"}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Speech-to-text and rewriting run on your account. No API keys are stored on this computer.
+            </p>
+          </div>
+          <Button onClick={() => window.subx.auth.signOut()}>Sign out</Button>
         </div>
-        <p className="mt-3 text-xs text-faint">
-          Keys are read from <code className="text-muted">.env</code> at the repo root while the backend is
-          being built. Restart the app after changing them.
-        </p>
+        <div className="mt-4 space-y-2.5 border-t border-line-soft pt-3.5">
+          <EngineStatus ready={info?.providers.stt} name="Speech to text" />
+          <EngineStatus ready={info?.providers.llm} name="Rewriting and Roman script" />
+        </div>
       </Card>
 
       <Card title="Recordings">
@@ -131,7 +133,7 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
   );
 }
 
-function EngineStatus({ ready, name, env }: { ready: boolean | undefined; name: string; env: string }) {
+function EngineStatus({ ready, name }: { ready: boolean | undefined; name: string }) {
   return (
     <p className="flex items-center gap-2">
       <span
@@ -139,7 +141,7 @@ function EngineStatus({ ready, name, env }: { ready: boolean | undefined; name: 
         aria-hidden="true"
       />
       <span className="font-medium">{name}</span>
-      <span className="text-muted">{ready ? "ready" : `off — set ${env}`}</span>
+      <span className="text-muted">{ready ? "ready" : "unavailable"}</span>
     </p>
   );
 }

@@ -1,14 +1,16 @@
 import { type LlmProvider, type SttProvider, SubxError } from "@subx/core";
 import { FakeLlm, FakeStt } from "@subx/core/fakes";
 import { OpenRouterLlm } from "./llm/openrouter";
-import { type GnaniFormat, type GnaniLanguage, GnaniStt } from "./stt/gnani";
+import { type GnaniFormat, type GnaniLanguage, GnaniStt, type TokenSource } from "./stt/gnani";
 
 export interface ProviderConfig {
   /** e.g. "gnani", "openrouter", "fake". */
   id: string;
   model?: string;
-  /** Short-lived token from our backend — never a raw vendor API key. */
-  token?: string;
+  /** The user's session, or a dev key. A function is re-read for every call. */
+  token?: TokenSource;
+  /** True when `baseUrl` is our own backend, which authenticates the user instead of the vendor. */
+  viaBackend?: boolean;
   baseUrl?: string;
   /** Recognition locale for STT, e.g. "hi-IN". One only; Gnani takes no language list. */
   language?: GnaniLanguage;
@@ -28,6 +30,7 @@ export function createStt(config: ProviderConfig): SttProvider {
     case "gnani":
       return new GnaniStt({
         token: requireToken(config, "Gnani"),
+        viaBackend: config.viaBackend,
         model: config.model,
         baseUrl: config.baseUrl,
         language: config.language,
@@ -57,7 +60,7 @@ export function createLlm(config: ProviderConfig): LlmProvider {
   }
 }
 
-function requireToken(config: ProviderConfig, name: string): string {
+function requireToken(config: ProviderConfig, name: string): TokenSource {
   if (!config.token) throw new SubxError("provider", `${name} needs a token`);
   return config.token;
 }
@@ -74,5 +77,7 @@ export {
   headerSafeTerms,
   isGnaniFormat,
   isGnaniLanguage,
+  resolveToken,
+  type TokenSource,
   toLocale,
 } from "./stt/gnani";

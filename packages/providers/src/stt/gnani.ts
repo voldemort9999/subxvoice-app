@@ -77,9 +77,23 @@ export function isGnaniFormat(value: string): value is GnaniFormat {
   return (GNANI_FORMATS as readonly string[]).includes(value);
 }
 
+/**
+ * How a request proves who it is. A Supabase session expires while the app is open, so this is
+ * asked for each time rather than captured once when the provider is built.
+ */
+export type TokenSource = string | (() => string | Promise<string>);
+
+export const resolveToken = async (token: TokenSource): Promise<string> =>
+  typeof token === "function" ? await token() : token;
+
 export interface GnaniOptions {
-  /** Short-lived token from our backend, or a dev key from the environment. */
-  token: string;
+  /** The user's session, read fresh for every dictation. */
+  token: TokenSource;
+  /**
+   * Set when the socket goes through our own backend, which authenticates the user instead of
+   * carrying Gnani's key. The key never reaches the app, so the app never sends one.
+   */
+  viaBackend?: boolean;
   model?: string;
   /** Full endpoint override, for tests or a future private deployment. */
   baseUrl?: string;
@@ -137,7 +151,8 @@ export class GnaniStt implements SttProvider {
         `Gnani cannot transcribe ${sampleRate} Hz audio — it accepts ${SUPPORTED_SAMPLE_RATES.join(", ")}.`,
       );
     }
-    const stream = new GnaniStream(this.options, options, sampleRate, batch);
+    const token = await resolveToken(this.options.token);
+    const stream = new GnaniStream(this.options, token, options, sampleRate, batch);
     await stream.ready();
     return stream;
   }
@@ -167,6 +182,7 @@ class GnaniStream implements SttStream {
 
   constructor(
     connection: GnaniOptions,
+    token: string,
     options: SttOptions,
     sampleRate: number,
     private readonly batch: boolean,
@@ -187,7 +203,9 @@ class GnaniStream implements SttStream {
     const keyterms = headerSafeTerms(options.vocabulary);
     this.socket = new WithHeaders(connection.baseUrl ?? GNANI_STT_URL, {
       headers: {
-        "x-api-key-id": connection.token,
+        // Through our backend the session identifies the user and the key stays server-side;
+        // talking to Gnani directly, the key is the credential.
+        ...(connection.viaBackend ? { Authorization: `Bearer ${token}` } : { "x-api-key-id": token }),
         "x-sample-rate": String(sampleRate),
         // A per-dictation hint wins; otherwise the provider's configured locale.
         language_code: options.languageHint

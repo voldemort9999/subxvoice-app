@@ -103,11 +103,15 @@ afterEach(() => {
   FakeSocket.last = null;
 });
 
+/** The token is resolved before the socket is built, so the fake needs a turn to appear. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 /** Opens a stream and hands back the socket the provider built. */
 async function open(vocabulary: string[] = []) {
   install();
   const stt = new GnaniStt({ token: "vach_test" });
   const streamPromise = stt.startStream({ vocabulary }, 16000);
+  await tick();
   // ready() resolves on `connected`, which is the service's handshake reply.
   FakeSocket.last?.deliver({ type: "connected", config: { sample_rate: 16000, chunk_size: 512 } });
   const stream = await streamPromise;
@@ -135,6 +139,39 @@ describe("GnaniStt session setup", () => {
 
   it("needs a token", () => {
     expect(() => new GnaniStt({ token: "" })).toThrow(/token/);
+  });
+});
+
+describe("credentials", () => {
+  it("sends the session, not a vendor key, when it goes through our backend", async () => {
+    install();
+    const stt = new GnaniStt({ token: "jwt-abc", viaBackend: true, baseUrl: "wss://backend/stt" });
+    const streaming = stt.startStream({ vocabulary: [] }, 16000);
+    await tick();
+    const socket = FakeSocket.last as FakeSocket;
+    socket.deliver({ type: "connected", config: {} });
+    await streaming;
+
+    expect(socket.url).toBe("wss://backend/stt");
+    expect(socket.init.headers.Authorization).toBe("Bearer jwt-abc");
+    // The app has no Gnani key to send, and must not invent one.
+    expect(socket.init.headers["x-api-key-id"]).toBeUndefined();
+  });
+
+  it("asks for the token again for every dictation, because sessions expire", async () => {
+    install();
+    let issued = 0;
+    const stt = new GnaniStt({ token: () => `jwt-${++issued}`, viaBackend: true });
+
+    for (const expected of ["Bearer jwt-1", "Bearer jwt-2"]) {
+      const streaming = stt.startStream({ vocabulary: [] }, 16000);
+      await tick();
+      const socket = FakeSocket.last as FakeSocket;
+      socket.deliver({ type: "connected", config: {} });
+      await streaming;
+      expect(socket.init.headers.Authorization).toBe(expected);
+    }
+    expect(issued).toBe(2);
   });
 });
 
@@ -167,6 +204,7 @@ describe("GnaniStt audio framing", () => {
     install();
     const stt = new GnaniStt({ token: "vach_test" });
     const streamPromise = stt.startStream({ vocabulary: [] }, 16000);
+    await tick();
     const socket = FakeSocket.last as FakeSocket;
 
     // The mic starts with the key-down, which can beat the handshake.
@@ -243,9 +281,10 @@ describe("GnaniStt finishing", () => {
       { samples: new Int16Array(16000), sampleRate: 16000 },
       { vocabulary: [] },
     );
+    await tick();
     const socket = FakeSocket.last as FakeSocket;
     socket.deliver({ type: "connected", config: {} });
-    await Promise.resolve();
+    await tick();
 
     socket.deliver({ type: "speech_start", utterance_id: "u1" });
     socket.deliver({ type: "transcript", utterance_id: "u1", text: "first part" });

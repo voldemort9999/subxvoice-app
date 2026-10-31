@@ -5,8 +5,9 @@ import { DictionaryPage } from "./pages/DictionaryPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { InsightsPage } from "./pages/InsightsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SignInPage } from "./pages/SignInPage";
 import { hotkeyLabel } from "./shared/format";
-import { useAppInfo, useTheme } from "./shared/hooks";
+import { useAccount, useAppInfo, useTheme } from "./shared/hooks";
 import { MoonIcon, SunIcon } from "./shared/icons";
 import { type PageId, Sidebar } from "./shared/Sidebar";
 import { IconButton } from "./shared/ui";
@@ -22,9 +23,16 @@ const TITLES: Record<PageId, string> = {
 export function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [theme, setTheme] = useTheme();
+  const account = useAccount();
   const info = useAppInfo();
   const hotkey = hotkeyLabel(info?.hotkeys[0]?.keys);
-  const ready = Boolean(info?.providers.stt);
+  // Dictation runs on the account's session, so without one there is nothing the app can do.
+  const ready = Boolean(info?.providers.stt && account?.signedIn);
+
+  // Nothing is drawn until the saved session has been checked, so the window never flashes the
+  // sign-in form at someone who is already signed in.
+  if (!account) return <div className="h-full bg-canvas" />;
+  if (!account.signedIn) return <SignInPage />;
 
   return (
     <div className="flex h-full bg-canvas">

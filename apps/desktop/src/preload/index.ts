@@ -9,6 +9,13 @@ function subscribe<T>(channel: string, listener: (value: T) => void): () => void
 
 const api: SubxApi = {
   os: process.platform === "win32" ? "win" : "mac",
+  auth: {
+    state: () => ipcRenderer.invoke(IPC.authState),
+    signIn: (email, password) => ipcRenderer.invoke(IPC.authSignIn, email, password),
+    signUp: (email, password) => ipcRenderer.invoke(IPC.authSignUp, email, password),
+    signOut: () => ipcRenderer.invoke(IPC.authSignOut),
+    onChanged: (listener) => subscribe(IPC.authChanged, listener),
+  },
   app: {
     info: () => ipcRenderer.invoke(IPC.appInfo),
     openRecordingsFolder: () => ipcRenderer.invoke(IPC.openRecordingsFolder),

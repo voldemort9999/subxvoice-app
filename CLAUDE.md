@@ -84,8 +84,12 @@ unit-tested without a microphone.
 
 ## Secrets
 
-`.env` at the repo root, gitignored, never committed: `GNANI_API_KEY`, `OPENROUTER_API_KEY`,
-and the optional `GNANI_MODEL`, `GNANI_LANGUAGE`, `GNANI_FORMAT`. `.env.example` documents them. This is a development bridge only — AGENTS.md
+**The app holds no vendor keys.** Speech-to-text and rewriting go through Supabase Edge Functions
+(`supabase/functions/stt`, `supabase/functions/llm`) that the signed-in account unlocks; the Gnani
+and OpenRouter keys live there as function secrets. `.env` at the repo root is now only developer
+tuning — `GNANI_MODEL`, `GNANI_LANGUAGE`, `GNANI_FORMAT`, `OPENROUTER_MODEL` — and is read in
+development only. The Supabase URL and anon key are compiled into `main/auth.ts`; neither is a
+secret, which is the point of the anon key. `.env.example` documents them. This is a development bridge only — AGENTS.md
 rule 3 still stands, and the backend will hand out short-lived tokens later.
 
 ## Context system

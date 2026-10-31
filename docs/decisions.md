@@ -2,6 +2,20 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-10-31 — Both vendors move behind Supabase, because Gnani has no short-lived tokens
+Checked rather than assumed: Gnani's docs have no authentication section at all, only a long-lived
+`x-api-key-id` on the websocket upgrade, and they tell you to proxy from a backend to keep it off the
+client. So `supabase/functions/stt` relays the dictation socket and `supabase/functions/llm` forwards
+rewriting, both with JWT verification on; the app signs in with email and a password and holds no
+vendor key. Measured on a real recording, three passes each, release-to-text goes 462ms direct to
+503ms relayed — about 40ms, against the 100ms we were willing to spend. The handshake costs more
+(182ms to 517ms) but runs at key-down while the user is still speaking, and audio is buffered until
+it completes. Three things the relay had to be shaped around, all found by testing: this runtime has
+no `WebSocketStream` and Deno's `WebSocket` cannot set headers, so the upstream leg uses `npm:ws`;
+the upstream socket must be opened from the client socket's `onopen`, because starting it any
+earlier leaves the client connection dead; and `ws` reports every frame as a Buffer, so the frame's
+own binary flag is what separates a transcript from audio.
+
 ### 2026-10-30 — Gnani replaces Soniox for speech-to-text
 Gnani (`wss://api.vachana.ai/stt/v3/stream`) is now the only STT plug; the Soniox provider is gone. The
 switch was a project requirement, not a measurement, but the measurements that came with it shape the
