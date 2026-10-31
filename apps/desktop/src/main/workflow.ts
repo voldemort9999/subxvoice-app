@@ -53,11 +53,11 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
 
           if (outcome.kind === "empty") {
             deps.log?.("dictation: nothing heard");
-            return "Nothing heard";
+            return { text: "Nothing heard" };
           }
           if (outcome.kind === "command") {
             deps.log?.(`dictation: command "${outcome.command}"`);
-            return `Command: ${outcome.command}`;
+            return { text: `Command: ${outcome.command}` };
           }
 
           const { record } = outcome;
@@ -69,7 +69,7 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
           // The transcript is saved either way; a failed paste is surfaced so the pill shows why
           // nothing appeared, rather than silently doing nothing.
           if (outcome.pasteError) throw new Error(outcome.pasteError);
-          return record.finalText;
+          return { text: record.finalText, warning: record.rewriteError };
         },
         cancel: () => {
           // Drain the stream so the socket closes rather than leaking; the result is discarded.
@@ -97,7 +97,7 @@ function keepAudioOnly(deps: WorkflowDeps, mode: Mode): DictationRun {
       };
       await deps.history.save(record);
       await keepAudio(deps, clip, record.id);
-      return deps.problems[0] ?? "Speech-to-text is not configured";
+      return { text: deps.problems[0] ?? "Speech-to-text is not configured" };
     },
     cancel: () => {},
   };

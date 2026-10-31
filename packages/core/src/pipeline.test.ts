@@ -44,6 +44,41 @@ describe("Pipeline", () => {
     await expect(pipeline.process(audio, "style", {})).rejects.toThrow("LLM");
   });
 
+  it("says why the words went in as heard when rewriting fails", async () => {
+    // A dictation that lands in Devanagari after the user asked for Roman looks like a broken
+    // feature unless the reason travels with it.
+    const llm = new FakeLlm("");
+    llm.complete = async () => {
+      throw new Error("401 Unauthorized");
+    };
+    const { pipeline, inserter, history } = setup("मेरा नाम भावेश है", llm);
+
+    const outcome = await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(outcome.kind).toBe("inserted");
+    // The words are never lost.
+    expect(inserter.inserted).toEqual(["मेरा नाम भावेश है"]);
+    expect(history.records[0]?.rewriteError).toMatch(/401/);
+  });
+
+  it("says so when rewriting comes back with nothing", async () => {
+    const { pipeline, inserter, history } = setup("मेरा नाम भावेश है", new FakeLlm("   "));
+
+    await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(inserter.inserted).toEqual(["मेरा नाम भावेश है"]);
+    expect(history.records[0]?.rewriteError).toMatch(/empty/i);
+  });
+
+  it("records nothing when there was nothing to rewrite", async () => {
+    // Pure Latin with a Roman preference never reaches the model, so it is not a failure.
+    const { pipeline, history } = setup("already in latin", new FakeLlm("unused"));
+
+    await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(history.records[0]?.rewriteError).toBeUndefined();
+  });
+
   it("commands are returned to the caller, not typed", async () => {
     const { pipeline, inserter } = setup("write a mail to the professor about the deadline");
 

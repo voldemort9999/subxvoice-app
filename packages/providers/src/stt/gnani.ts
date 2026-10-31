@@ -223,7 +223,9 @@ class GnaniStream implements SttStream {
       this.fail(
         new SubxError(
           "provider",
-          "Gnani refused the connection — check GNANI_API_KEY and that the key is active",
+          connection.viaBackend
+            ? "Speech-to-text refused the connection. Sign in again, then try once more."
+            : "Gnani refused the connection — check the API key and that it is active",
         ),
       );
     this.socket.onclose = (event) => {
@@ -235,7 +237,16 @@ class GnaniStream implements SttStream {
     };
 
     setTimeout(() => {
-      if (!this.opened) this.fail(new SubxError("provider", "Gnani did not accept the connection"));
+      if (!this.opened) {
+        this.fail(
+          new SubxError(
+            "provider",
+            connection.viaBackend
+              ? "Speech-to-text did not answer in time. Check your connection and try again."
+              : "Gnani did not accept the connection",
+          ),
+        );
+      }
     }, OPEN_TIMEOUT_MS);
   }
 

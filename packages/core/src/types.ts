@@ -49,5 +49,10 @@ export interface SessionRecord {
   audioPath?: string;
   /** Length of the recording. */
   audioMs?: number;
+  /**
+   * Set when rewriting or transliteration could not run, so the text went in as it was heard.
+   * The words are never lost, but the user is told why they are in the wrong script.
+   */
+  rewriteError?: string;
   timings: Timings;
 }

@@ -46,6 +46,14 @@ export function HistoryRow({ record }: { record: SessionRecord }) {
                 <span className="truncate">{record.context.appName}</span>
               </>
             )}
+            {record.rewriteError && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate text-warn" title={record.rewriteError}>
+                  went in as heard
+                </span>
+              </>
+            )}
           </p>
         </div>
 

@@ -76,7 +76,17 @@ export function Pill() {
           ) : (
             <Dots />
           ))}
-        {state.kind === "done" && <span className="truncate text-xs text-white/90">{state.message}</span>}
+        {state.kind === "done" && (
+          <span className="flex min-w-0 items-center gap-1.5">
+            {/* The words still went in; the dot says they are not in the script that was asked for. */}
+            {state.warning && (
+              <span role="img" aria-label={state.warning} title={state.warning}>
+                <span className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
+              </span>
+            )}
+            <span className="truncate text-xs text-white/90">{state.message}</span>
+          </span>
+        )}
         {state.kind === "error" && <span className="truncate text-xs text-red-300">{state.message}</span>}
       </button>
     </div>

@@ -90,7 +90,8 @@ export type PillState =
   | { kind: "listening" }
   /** `message` carries the raw transcript while the LLM is still cleaning it up. */
   | { kind: "processing"; message?: string }
-  | { kind: "done"; message: string }
+  /** `warning` says the words went in, but not in the script that was asked for. */
+  | { kind: "done"; message: string; warning?: string }
   | { kind: "error"; message: string };
 
 export type MicCommand = "start" | "stop";

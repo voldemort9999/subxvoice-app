@@ -120,10 +120,8 @@ export class Pipeline {
     }
 
     // At most one LLM call: style mode folds the script rule into its own prompt.
-    const finalText =
-      route.mode === "style"
-        ? await this.rewrite(text, context, script)
-        : await this.transliterate(text, script);
+    const rewritten = await this.finalise(text, context, script, route.mode);
+    const finalText = rewritten.text;
     const llmMs = clock.lap();
 
     // A failed paste must never lose what the user said: record it anyway and report the error.
@@ -142,35 +140,48 @@ export class Pipeline {
       context,
       rawText: transcript.text,
       finalText,
+      ...(rewritten.error ? { rewriteError: rewritten.error } : {}),
       timings: { sttMs, rulesMs, llmMs, insertMs, totalMs: sttMs + clock.total() },
     };
     await this.deps.history.save(record);
     return pasteError ? { kind: "inserted", record, pasteError } : { kind: "inserted", record };
   }
 
-  private async rewrite(text: string, context: AppContext, script: ScriptPreference): Promise<string> {
-    if (!this.deps.llm) throw new SubxError("unsupported", "Style mode needs an LLM provider");
-    const response = await this.deps.llm.complete({
-      system: styleRewritePrompt(context, script),
-      messages: [{ role: "user", content: text }],
-    });
-    return response.text.trim();
-  }
-
   /**
-   * Exact mode with a Roman script preference. The user's own words are never lost: if the model
-   * is missing or fails, the text goes in as it was heard.
+   * The text as it should be typed, and why it is not, when it is not.
+   *
+   * The user's own words are never lost: if the model is missing or the call fails, what was heard
+   * goes in unchanged. Returning the reason instead of swallowing it is the point — a dictation
+   * that silently lands in Devanagari after the user asked for Roman looks like a broken feature
+   * rather than a failed request.
    */
-  private async transliterate(text: string, script: ScriptPreference): Promise<string> {
-    if (!this.deps.llm || !needsTransliteration(text, script)) return text;
+  private async finalise(
+    text: string,
+    context: AppContext,
+    script: ScriptPreference,
+    mode: Mode,
+  ): Promise<{ text: string; error?: string }> {
+    // Style mode exists to rewrite, so without a model there is nothing honest to return — the raw
+    // words are not "styled" text. Exact mode is different: the words are already what was asked
+    // for, only in the wrong script.
+    if (mode === "style" && !this.deps.llm) {
+      throw new SubxError("unsupported", "Style mode needs an LLM provider");
+    }
+    const wanted = mode === "style" || needsTransliteration(text, script);
+    if (!wanted || !this.deps.llm) return { text };
+
+    const system = mode === "style" ? styleRewritePrompt(context, script) : transliteratePrompt();
     try {
       const response = await this.deps.llm.complete({
-        system: transliteratePrompt(),
+        system,
         messages: [{ role: "user", content: text }],
       });
-      return response.text.trim() || text;
-    } catch {
-      return text;
+      const rewritten = response.text.trim();
+      if (rewritten) return { text: rewritten };
+      return { text, error: "Rewriting came back empty, so the words went in as heard." };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { text, error: `Rewriting failed (${reason}), so the words went in as heard.` };
     }
   }
 }

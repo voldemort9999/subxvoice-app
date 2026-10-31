@@ -14,8 +14,11 @@ const RESULT_VISIBLE_MS = 1500;
 export interface DictationRun {
   /** Feed a chunk of 16 kHz mono PCM. */
   push(samples: Int16Array): void;
-  /** Finalise: `clip` is the whole recording, kept for history audio. Returns the pill message. */
-  finish(clip: AudioClip): Promise<string>;
+  /**
+   * Finalise: `clip` is the whole recording, kept for history audio. Returns the pill message and,
+   * when the text could not be put in the script the user asked for, the reason.
+   */
+  finish(clip: AudioClip): Promise<{ text: string; warning?: string }>;
   /** Discard without typing anything. */
   cancel(): void;
 }
@@ -109,7 +112,8 @@ export class DictationController {
     if (!run) return; // open failed; failOpen already showed the error
 
     try {
-      this.showResult({ kind: "done", message: await run.finish(clip) });
+      const result = await run.finish(clip);
+      this.showResult({ kind: "done", message: result.text, warning: result.warning });
     } catch (error) {
       this.showResult({ kind: "error", message: message(error) });
     }

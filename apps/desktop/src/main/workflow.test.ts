@@ -57,7 +57,7 @@ describe("createWorkflow", () => {
     const { workflow, inserter } = build({ spoken: "hi there", reply: "Hi there." });
     const run = await workflow.open("style");
     run.push(clip.samples);
-    const message = await run.finish(clip);
+    const { text: message } = await run.finish(clip);
 
     expect(inserter.inserted).toEqual(["Hi there."]);
     expect(message).toBe("Hi there.");
@@ -85,7 +85,7 @@ describe("createWorkflow", () => {
   it("reports silence without touching the cursor", async () => {
     const { workflow, inserter } = build({ spoken: "   " });
     const run = await workflow.open("exact");
-    const message = await run.finish(clip);
+    const { text: message } = await run.finish(clip);
 
     expect(message).toBe("Nothing heard");
     expect(inserter.inserted).toEqual([]);
@@ -94,7 +94,7 @@ describe("createWorkflow", () => {
   it("surfaces a command instead of typing it", async () => {
     const { workflow, inserter } = build({ spoken: "write a mail to the team" });
     const run = await workflow.open("exact");
-    const message = await run.finish(clip);
+    const { text: message } = await run.finish(clip);
 
     expect(message).toBe("Command: email");
     expect(inserter.inserted).toEqual([]);
@@ -107,7 +107,7 @@ describe("createWorkflow", () => {
       problems: ["Speech-to-text is off: GNANI_API_KEY is not set."],
     });
     const run = await workflow.open("exact");
-    const message = await run.finish(clip);
+    const { text: message } = await run.finish(clip);
     await Promise.resolve();
 
     expect(message).toBe("Speech-to-text is off: GNANI_API_KEY is not set.");
