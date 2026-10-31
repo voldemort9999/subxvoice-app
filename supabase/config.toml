@@ -1,0 +1,10 @@
+# Only the pieces the desktop app depends on. The project itself is configured through the
+# dashboard; this file is here so the functions can be deployed from a checkout.
+project_id = "tbtwdryremxatgikigph"
+
+[functions.stt]
+# The app sends a Supabase session on the upgrade request, so the gateway can check it for us.
+verify_jwt = true
+
+[functions.llm]
+verify_jwt = true
