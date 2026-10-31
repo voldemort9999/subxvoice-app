@@ -168,7 +168,12 @@ export class Pipeline {
       throw new SubxError("unsupported", "Style mode needs an LLM provider");
     }
     const wanted = mode === "style" || needsTransliteration(text, script);
-    if (!wanted || !this.deps.llm) return { text };
+    if (!wanted) return { text };
+    // The last silent path: no model means the script stays as heard, and the user should know
+    // that rather than conclude the setting does nothing.
+    if (!this.deps.llm) {
+      return { text, error: "Rewriting is unavailable, so the words went in as heard." };
+    }
 
     const system = mode === "style" ? styleRewritePrompt(context, script) : transliteratePrompt();
     try {
@@ -177,8 +182,13 @@ export class Pipeline {
         messages: [{ role: "user", content: text }],
       });
       const rewritten = response.text.trim();
-      if (rewritten) return { text: rewritten };
-      return { text, error: "Rewriting came back empty, so the words went in as heard." };
+      if (!rewritten) return { text, error: "Rewriting came back empty, so the words went in as heard." };
+      // Asked for Roman and still got Devanagari: the call succeeded but did not do the one thing
+      // it was for, which from the outside is indistinguishable from the feature being broken.
+      if (needsTransliteration(rewritten, script)) {
+        return { text: rewritten, error: "Rewriting left the text in its original script." };
+      }
+      return { text: rewritten };
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       return { text, error: `Rewriting failed (${reason}), so the words went in as heard.` };

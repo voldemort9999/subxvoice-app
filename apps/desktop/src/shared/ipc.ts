@@ -69,6 +69,8 @@ export interface AppSettings {
   script: ScriptPreference;
   /** MediaDevices id, or "" for the system default. */
   microphoneId: string;
+  /** Start SUBXVoice when the user signs in to the computer. */
+  launchAtLogin: boolean;
 }
 
 /** Dictation time used today, and what is left of the daily allowance. */

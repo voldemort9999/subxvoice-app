@@ -79,6 +79,24 @@ describe("Pipeline", () => {
     expect(history.records[0]?.rewriteError).toBeUndefined();
   });
 
+  it("says so when there is no model to rewrite with", async () => {
+    const { pipeline, history } = setup("मेरा नाम भावेश है");
+
+    await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(history.records[0]?.rewriteError).toMatch(/unavailable/i);
+  });
+
+  it("says so when the model answers but leaves the script alone", async () => {
+    // The call succeeds and returns text, so nothing throws — but it did not do the one thing it
+    // was for, and silence here reads as "the setting does nothing".
+    const { pipeline, history } = setup("मेरा नाम भावेश है", new FakeLlm("मेरा नाम भावेश है"));
+
+    await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(history.records[0]?.rewriteError).toMatch(/original script/i);
+  });
+
   it("commands are returned to the caller, not typed", async () => {
     const { pipeline, inserter } = setup("write a mail to the professor about the deadline");
 

@@ -5,6 +5,8 @@ import { loadPage, PRELOAD_PATH } from "./renderer";
 const WIDTH = 240;
 const HEIGHT = 64;
 const BOTTOM_GAP = 8;
+/** How long to wait for a first paint before showing the pill regardless. */
+const SHOW_FALLBACK_MS = 4000;
 
 /**
  * The small indicator that is always on screen. It never takes focus, so the user's app keeps the
@@ -42,11 +44,31 @@ export class PillWindow {
     this.window.setAlwaysOnTop(true, "screen-saver");
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     this.setHover(false);
-    this.window.once("ready-to-show", () => {
-      this.moveToCursorScreen();
-      this.window.showInactive();
+    // The pill is the only thing on screen while dictating, and it is also where the microphone
+    // lives on Windows. If its renderer dies the app looks like it is doing nothing at all, so
+    // every way it can fail is reported rather than left silent.
+    this.window.webContents.on("render-process-gone", (_event, details) => {
+      console.error("pill renderer gone:", details.reason);
     });
+    this.window.webContents.on("did-fail-load", (_event, code, description, url) => {
+      console.error(`pill failed to load (${code} ${description}): ${url}`);
+    });
+    this.window.webContents.on("console-message", (_event, level, message, line, source) => {
+      if (level >= 2) console.error(`pill console: ${message} (${source}:${line})`);
+    });
+
+    this.window.once("ready-to-show", () => this.reveal());
+    // ready-to-show waits for a first paint, which never comes if the page throws before it
+    // renders. Showing anyway is better than an app with no visible state at all.
+    setTimeout(() => this.reveal(), SHOW_FALLBACK_MS);
+
     loadPage(this.window, "pill.html");
+  }
+
+  private reveal(): void {
+    if (this.window.isDestroyed() || this.window.isVisible()) return;
+    this.moveToCursorScreen();
+    this.window.showInactive();
   }
 
   /** Bottom-centre of whichever screen the mouse is on. */

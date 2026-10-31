@@ -246,6 +246,35 @@ export function Select({
   );
 }
 
+export function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+        checked ? "bg-accent" : "bg-raised"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+          checked ? "translate-x-[18px]" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
 /** An empty screen is an invitation to act, so it always says what to do next. */
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-muted">{children}</p>;

@@ -27,6 +27,8 @@ export interface WorkflowDeps {
   /** Raw words as heard, shown while the model is still formatting them. */
   onHeard(text: string): void;
   onHistoryChanged(): void;
+  /** Whether an account is signed in. Dictation runs on its session, so without one it refuses. */
+  signedIn?(): Promise<boolean>;
   /**
    * Today's remaining dictation seconds, asked for only when opening fails — the happy path must
    * not pay for a round trip it does not need.
@@ -39,6 +41,12 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
   return {
     async open(mode: Mode): Promise<DictationRun> {
       // Settings are read per dictation, so changing the script takes effect on the next one.
+      // Checked before the microphone opens: signing out must stop dictation, not merely make it
+      // fail at the far end of a network call.
+      if (deps.signedIn && !(await deps.signedIn().catch(() => false))) {
+        throw new Error("Sign in to SUBXVoice to dictate.");
+      }
+
       const settings = await deps.settings.all();
       const context = await deps.context.current().catch(() => ({}) as AppContext);
 

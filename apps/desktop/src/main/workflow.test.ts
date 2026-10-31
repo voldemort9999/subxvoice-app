@@ -33,7 +33,14 @@ function build(opts: {
   const deps: WorkflowDeps = {
     pipeline,
     problems: opts.problems ?? [],
-    settings: { all: async () => ({ hotkey: "ctrl+win", script: opts.script ?? "roman", microphoneId: "" }) },
+    settings: {
+      all: async () => ({
+        hotkey: "ctrl+win",
+        script: opts.script ?? "roman",
+        microphoneId: "",
+        launchAtLogin: false,
+      }),
+    },
     context: { current: async () => ({ appName: "Notes" }) },
     history: {
       save: (record) => history.save(record),

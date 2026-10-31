@@ -41,6 +41,9 @@ let microphones: MicrophoneOption[] = [];
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null; // kept in a variable so it isn't garbage-collected
 
+/** True when Windows launched us at login (see the login item's args). */
+const startedHidden = () => process.argv.includes("--hidden") || app.getLoginItemSettings().wasOpenedAtLogin;
+
 function openMainWindow(): void {
   if (process.platform === "darwin") app.focus({ steal: true });
   if (mainWindow) {
@@ -110,6 +113,7 @@ function assertSettings(value: unknown, accepts: (keys: string) => boolean): Par
     patch.hotkey = input.hotkey;
   }
   if (input.script === "native" || input.script === "roman") patch.script = input.script;
+  if (typeof input.launchAtLogin === "boolean") patch.launchAtLogin = input.launchAtLogin;
   if (typeof input.microphoneId === "string" && input.microphoneId.length <= 200) {
     patch.microphoneId = input.microphoneId;
   }
@@ -130,7 +134,22 @@ async function start(): Promise<void> {
     hotkey: platform.hotkey.defaultBindings()[0]?.keys ?? "",
     script: "roman",
     microphoneId: "",
+    launchAtLogin: false,
   });
+
+  /**
+   * Mirrored to the OS rather than stored only by us: the user can also turn it off in Windows
+   * Settings, and whatever they did there last is the truth.
+   */
+  const applyLaunchAtLogin = (openAtLogin: boolean) => {
+    if (!app.isPackaged) return; // dev runs from electron.exe, which is not what would autostart
+    app.setLoginItemSettings({
+      openAtLogin,
+      // Started this way the app belongs in the tray, not in front of whatever the user opened.
+      args: ["--hidden"],
+    });
+  };
+  applyLaunchAtLogin((await settings.all()).launchAtLogin);
 
   const bindings = async (): Promise<HotkeyBinding[]> => {
     const { hotkey } = await settings.all();
@@ -232,6 +251,7 @@ async function start(): Promise<void> {
       newId: randomUUID,
       // Show the words as heard while the model is still cleaning them up.
       onHeard: (text) => pill.setState({ kind: "processing", message: text }),
+      signedIn: async () => (await account.state()).signedIn,
       remainingSeconds: async () => (await account.usage())?.remaining ?? null,
       onHistoryChanged: notifyHistoryChanged,
       log: (line) => console.log(line),
@@ -241,6 +261,7 @@ async function start(): Promise<void> {
   ipcMain.handle(IPC.settingsGet, () => settings.all());
   ipcMain.handle(IPC.settingsSet, async (_event, patch: unknown) => {
     const next = await settings.update(assertSettings(patch, (keys) => platform.hotkey.accepts(keys)));
+    applyLaunchAtLogin(next.launchAtLogin);
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send(IPC.settingsChanged, next);
     }
@@ -291,7 +312,9 @@ async function start(): Promise<void> {
   void registerHotkey();
 
   tray = createTray(openMainWindow);
-  openMainWindow();
+  // Started by Windows at login, the app belongs in the tray with the pill on screen — not in
+  // front of whatever the user was actually opening.
+  if (!startedHidden()) openMainWindow();
 }
 
 app.whenReady().then(() => {

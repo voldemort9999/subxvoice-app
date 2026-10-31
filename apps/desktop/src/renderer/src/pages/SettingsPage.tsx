@@ -5,7 +5,7 @@ import { HotkeyRecorder } from "../shared/HotkeyRecorder";
 import { useAccount, useMicrophones, useSettings } from "../shared/hooks";
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
-import { Button, Card, Field, Select } from "../shared/ui";
+import { Button, Card, Field, Select, Toggle } from "../shared/ui";
 
 const SCRIPTS = [
   {
@@ -88,6 +88,19 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
           <div className="mt-2 text-xs text-muted">
             <MicrophoneNote />
           </div>
+        </Field>
+      </Card>
+
+      <Card title="Startup">
+        <Field
+          label="Open at login"
+          hint="SUBXVoice starts in the background when you sign in to Windows, ready for the hotkey."
+        >
+          <Toggle
+            label="Open SUBXVoice at login"
+            checked={settings?.launchAtLogin ?? false}
+            onChange={(checked) => update({ launchAtLogin: checked })}
+          />
         </Field>
       </Card>
 
