@@ -204,6 +204,48 @@ export function Segmented<T extends string>({
   );
 }
 
+export interface SelectOption {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+/** One choice from a list. The hint for the chosen option sits under the control, not in it. */
+export function Select({
+  value,
+  options,
+  onChange,
+  label,
+  empty,
+}: {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  label: string;
+  empty?: string;
+}) {
+  if (options.length === 0) return <p className="text-muted">{empty ?? "Nothing to choose from."}</p>;
+  const chosen = options.find((option) => option.value === value);
+
+  return (
+    <div>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full max-w-sm rounded-lg border border-line bg-raised px-3 py-2 text-ink focus:border-accent focus:outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {chosen?.hint && <p className="voice-text mt-1.5 text-xs text-faint">{chosen.hint}</p>}
+    </div>
+  );
+}
+
 /** An empty screen is an invitation to act, so it always says what to do next. */
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-muted">{children}</p>;

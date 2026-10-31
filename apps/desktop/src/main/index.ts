@@ -16,6 +16,7 @@ import {
   type MicrophoneOption,
   type PermissionStatus,
 } from "../shared/ipc";
+import { appIcon } from "./brand";
 import { DictationController } from "./dictation";
 import { nativeMic, PillMic } from "./mic";
 import { PillWindow } from "./pill";
@@ -47,6 +48,8 @@ function openMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 680,
+    // Without this the taskbar and Alt-Tab show Electron's own icon.
+    icon: appIcon(),
     minWidth: 760,
     minHeight: 520,
     show: false,
@@ -88,11 +91,11 @@ function assertDictionaryEntry(value: unknown): DictionaryEntry {
 }
 
 /** Settings arrive from the renderer, so every field is checked before it is stored. */
-function assertSettings(value: unknown, supportedKeys: string[]): Partial<AppSettings> {
+function assertSettings(value: unknown, accepts: (keys: string) => boolean): Partial<AppSettings> {
   const input = (value ?? {}) as Partial<AppSettings>;
   const patch: Partial<AppSettings> = {};
   if (typeof input.hotkey === "string") {
-    if (!supportedKeys.includes(input.hotkey)) throw new Error(`Unsupported hotkey: ${input.hotkey}`);
+    if (!accepts(input.hotkey)) throw new Error(`Unsupported hotkey: ${input.hotkey}`);
     patch.hotkey = input.hotkey;
   }
   if (input.script === "native" || input.script === "roman") patch.script = input.script;
@@ -115,8 +118,8 @@ async function start(): Promise<void> {
 
   const bindings = async (): Promise<HotkeyBinding[]> => {
     const { hotkey } = await settings.all();
-    const supported = platform.hotkey.supportedKeys();
-    if (!hotkey || !supported.includes(hotkey)) return platform.hotkey.defaultBindings();
+    // settings.json is a file the user can edit, so a stored hotkey is re-checked every time.
+    if (!hotkey || !platform.hotkey.accepts(hotkey)) return platform.hotkey.defaultBindings();
     return [{ keys: hotkey, mode: "exact" }];
   };
 
@@ -126,6 +129,8 @@ async function start(): Promise<void> {
       version: app.getVersion(),
       hotkeys: await bindings(),
       supportedKeys: platform.hotkey.supportedKeys(),
+      // Windows watches any combination; macOS only the fixed set, so Settings offers a list there.
+      customHotkeys: platform.hotkey.accepts("ctrl+shift+f9"),
       providers: { stt: !!engines.stt, llm: !!engines.llm },
       nativeMicrophone: !!platform.microphone,
     }),
@@ -202,7 +207,7 @@ async function start(): Promise<void> {
 
   ipcMain.handle(IPC.settingsGet, () => settings.all());
   ipcMain.handle(IPC.settingsSet, async (_event, patch: unknown) => {
-    const next = await settings.update(assertSettings(patch, platform.hotkey.supportedKeys()));
+    const next = await settings.update(assertSettings(patch, (keys) => platform.hotkey.accepts(keys)));
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send(IPC.settingsChanged, next);
     }

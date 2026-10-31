@@ -15,10 +15,16 @@ export interface Hotkey {
   /** This OS's default hold-to-talk keys, used until the user picks their own. */
   defaultBindings(): HotkeyBinding[];
   /**
-   * Every `keys` value this OS can watch, so Settings can offer the same picker on both. The
-   * vocabulary differs per OS — "fn" on Mac, "ctrl+win" on Windows — but the UI does not.
+   * Keys worth suggesting in Settings. On an OS that only watches a fixed set this is the whole
+   * set; where any combination works it is a shortlist of good ones, and `accepts` is what
+   * decides. The vocabulary differs per OS — "fn" on Mac, "ctrl+win" on Windows.
    */
   supportedKeys(): string[];
+  /**
+   * Whether this OS can watch `keys`. Settings is not the only way in — settings.json is a file
+   * the user can edit — so this is the check that actually guards registration.
+   */
+  accepts(keys: string): boolean;
   register(bindings: HotkeyBinding[], onEvent: (event: HotkeyEvent) => void): Promise<void>;
   unregisterAll(): Promise<void>;
 }

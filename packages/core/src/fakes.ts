@@ -88,6 +88,7 @@ export function fakePlatform(): Platform & { inserter: FakeInserter } {
     hotkey: {
       defaultBindings: () => [{ keys: "right_option", mode: "exact" }],
       supportedKeys: () => ["right_option", "fn"],
+      accepts: (keys: string) => ["right_option", "fn"].includes(keys),
       register: async () => {},
       unregisterAll: async () => {},
     },

@@ -9,7 +9,36 @@ const KEYS: Record<string, number[]> = {
   shift: [VK.shift],
   alt: [VK.alt],
   win: [VK.lwin, VK.rwin],
+  space: [0x20],
+  tab: [0x09],
+  enter: [0x0d],
+  esc: [0x1b],
+  backspace: [0x08],
+  capslock: [0x14],
+  insert: [0x2d],
+  delete: [0x2e],
+  home: [0x24],
+  end: [0x23],
+  pageup: [0x21],
+  pagedown: [0x22],
+  left: [0x25],
+  up: [0x26],
+  right: [0x27],
+  down: [0x28],
 };
+
+// Letters and digits use their ASCII code as the virtual key; F1–F24 run on from 0x70. Generated
+// rather than listed, because forty-odd hand-written entries are forty-odd chances to mistype one.
+for (let index = 0; index < 26; index++) KEYS[String.fromCharCode(97 + index)] = [0x41 + index];
+for (let digit = 0; digit <= 9; digit++) KEYS[String(digit)] = [0x30 + digit];
+for (let n = 1; n <= 24; n++) KEYS[`f${n}`] = [0x6f + n];
+
+/**
+ * Hold-to-talk means the keys stay down for the length of a sentence, and a single key held that
+ * long would fire constantly while the user types. Two is the smallest combination that cannot
+ * happen by accident.
+ */
+const MIN_KEYS = 2;
 
 /** Mouse buttons live below 0x07 and must never count as "some other key". */
 const SCAN_FIRST = 0x08;
@@ -49,8 +78,17 @@ export class WinHotkey implements Hotkey {
     return [{ keys: "ctrl+win", mode: "exact" }];
   }
 
+  /** Suggestions only — Windows watches any combination `accepts` allows. */
   supportedKeys(): string[] {
     return ["ctrl+win", "ctrl+alt", "alt+win", "ctrl+shift+alt"];
+  }
+
+  accepts(keys: string): boolean {
+    try {
+      return parseBinding(keys).length >= MIN_KEYS;
+    } catch {
+      return false;
+    }
   }
 
   async register(bindings: HotkeyBinding[], onEvent: (event: HotkeyEvent) => void): Promise<void> {

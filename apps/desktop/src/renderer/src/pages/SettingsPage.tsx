@@ -1,11 +1,11 @@
 import { HotkeyNote, MicrophoneNote, PermissionsIntro } from "@platform/Chrome";
 import type { AppInfo } from "../../../shared/ipc";
-import { Choice } from "../shared/Choice";
 import { hotkeyLabel } from "../shared/format";
+import { HotkeyRecorder } from "../shared/HotkeyRecorder";
 import { useMicrophones, useSettings } from "../shared/hooks";
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
-import { Button, Card, Field } from "../shared/ui";
+import { Button, Card, Field, Select } from "../shared/ui";
 
 const SCRIPTS = [
   {
@@ -23,22 +23,34 @@ const SCRIPTS = [
 export function SettingsPage({ info }: { info: AppInfo | null }) {
   const [settings, update] = useSettings();
   const microphones = useMicrophones();
-  const hotkey = hotkeyLabel(info?.hotkeys[0]?.keys);
+  const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "";
 
   return (
     <div className="space-y-6">
       <Card title="Dictation">
         <Field
           label="Hotkey"
-          hint={<>Hold to dictate, let go to stop. Press any other key while holding to cancel.</>}
+          hint="Hold to dictate, let go to stop. Press any other key while holding to cancel."
         >
-          <Choice
-            name="hotkey"
-            value={settings?.hotkey ?? ""}
-            onChange={(value) => update({ hotkey: value })}
-            options={(info?.supportedKeys ?? []).map((keys) => ({ value: keys, label: hotkeyLabel(keys) }))}
-          />
-          <div className="mt-2 text-muted">
+          {info?.customHotkeys ? (
+            <HotkeyRecorder
+              value={hotkey}
+              presets={info.supportedKeys}
+              onChange={(keys) => update({ hotkey: keys })}
+            />
+          ) : (
+            // macOS watches a fixed set of keys, so there is a list to pick from instead.
+            <Select
+              label="Hotkey"
+              value={hotkey}
+              onChange={(value) => update({ hotkey: value })}
+              options={(info?.supportedKeys ?? []).map((keys) => ({
+                value: keys,
+                label: hotkeyLabel(keys),
+              }))}
+            />
+          )}
+          <div className="mt-2 text-xs text-muted">
             <HotkeyNote />
           </div>
         </Field>
@@ -47,8 +59,8 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
           label="Written as"
           hint="How languages that don't use Latin letters are written down. Your words are never translated."
         >
-          <Choice
-            name="script"
+          <Select
+            label="Written as"
             value={settings?.script ?? "native"}
             onChange={(value) => update({ script: value === "roman" ? "roman" : "native" })}
             options={SCRIPTS}
@@ -58,11 +70,11 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
           )}
         </Field>
 
-        <Field label="Microphone" hint={`Used while you hold ${hotkey}.`}>
+        <Field label="Microphone" hint={`Used while you hold ${hotkeyLabel(hotkey)}.`}>
           {/* With a native mic (Mac) the system input device is used, so the picker would do nothing. */}
           {info && !info.nativeMicrophone && (
-            <Choice
-              name="microphone"
+            <Select
+              label="Microphone"
               value={settings?.microphoneId ?? ""}
               onChange={(value) => update({ microphoneId: value })}
               options={[
@@ -72,7 +84,7 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
               empty="No microphone found. Allow microphone access, then reopen this page."
             />
           )}
-          <div className="mt-2 text-muted">
+          <div className="mt-2 text-xs text-muted">
             <MicrophoneNote />
           </div>
         </Field>

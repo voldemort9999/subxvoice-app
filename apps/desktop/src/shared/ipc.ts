@@ -42,8 +42,10 @@ export const IPC = {
 export interface AppInfo {
   version: string;
   hotkeys: HotkeyBinding[];
-  /** Every hotkey this OS can watch, for the Settings picker. */
+  /** Hotkeys worth suggesting. On macOS this is also the limit; see `customHotkeys`. */
   supportedKeys: string[];
+  /** True when any key combination can be recorded, rather than only `supportedKeys`. */
+  customHotkeys: boolean;
   /** Which engines are configured. Settings shows a warning when one is missing. */
   providers: { stt: boolean; llm: boolean };
   /**

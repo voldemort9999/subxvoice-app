@@ -69,6 +69,7 @@ export function streakDays(records: SessionRecord[]): number {
 export const totalAudioMs = (records: SessionRecord[]) =>
   records.reduce((total, record) => total + (record.audioMs ?? 0), 0);
 
+/** Keys whose own name is not what people call them. Everything else is title-cased. */
 export const HOTKEY_LABELS: Record<string, string> = {
   fn: "fn 🌐",
   right_option: "right ⌥ Option",
@@ -76,10 +77,32 @@ export const HOTKEY_LABELS: Record<string, string> = {
   right_ctrl: "right Ctrl",
   left_option: "left ⌥ Option",
   left_ctrl: "left Ctrl",
-  "ctrl+win": "Ctrl + Win",
-  "ctrl+alt": "Ctrl + Alt",
-  "alt+win": "Alt + Win",
-  "ctrl+shift+alt": "Ctrl + Shift + Alt",
 };
 
-export const hotkeyLabel = (keys: string | undefined) => (keys && HOTKEY_LABELS[keys]) ?? "the hotkey";
+const KEY_LABELS: Record<string, string> = {
+  ctrl: "Ctrl",
+  shift: "Shift",
+  alt: "Alt",
+  win: "Win",
+  esc: "Esc",
+  pageup: "Page Up",
+  pagedown: "Page Down",
+  capslock: "Caps Lock",
+};
+
+/**
+ * "ctrl+shift+f9" → "Ctrl + Shift + F9". Windows accepts any combination, so this formats one
+ * rather than looking it up.
+ */
+export function hotkeyLabel(keys: string | undefined): string {
+  if (!keys) return "the hotkey";
+  if (HOTKEY_LABELS[keys]) return HOTKEY_LABELS[keys];
+  return keys
+    .split("+")
+    .map((key) => KEY_LABELS[key] ?? (key.length === 1 ? key.toUpperCase() : titleCase(key)))
+    .join(" + ");
+}
+
+/** "f9" → "F9", "home" → "Home". */
+const titleCase = (key: string) =>
+  /^f\d+$/.test(key) ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1);

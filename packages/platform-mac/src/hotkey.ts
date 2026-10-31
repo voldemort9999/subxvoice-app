@@ -28,6 +28,11 @@ export class MacHotkey implements Hotkey {
     return [...SUPPORTED];
   }
 
+  /** The Swift helper watches a fixed set of keys, so the list is also the limit. */
+  accepts(keys: string): boolean {
+    return SUPPORTED.has(keys);
+  }
+
   async register(bindings: HotkeyBinding[], onEvent: (event: HotkeyEvent) => void): Promise<void> {
     for (const { keys } of bindings) {
       if (!SUPPORTED.has(keys)) throw new SubxError("unsupported", `Unsupported hotkey: ${keys}`);

@@ -21,7 +21,8 @@ describe("parseBinding", () => {
   });
 
   it("rejects a key the poller cannot read", () => {
-    expect(() => parseBinding("ctrl+capslock")).toThrow(/Unsupported hotkey/);
+    // Media and browser keys have virtual codes but no name here, so they cannot be bound.
+    expect(() => parseBinding("ctrl+volumeup")).toThrow(/Unsupported hotkey/);
   });
 });
 
@@ -105,5 +106,33 @@ describe("anyOtherKeyDown", () => {
 
   it("a mouse button is not a key", () => {
     expect(anyOtherKeyDown(new Set([VK.control]), (vk) => vk === 0x01)).toBe(false);
+  });
+});
+
+describe("accepting a custom combination", () => {
+  const hotkey = new WinHotkey(() => false);
+
+  it("takes any combination it can map to real keys", () => {
+    expect(hotkey.accepts("ctrl+win")).toBe(true);
+    expect(hotkey.accepts("ctrl+shift+f9")).toBe(true);
+    expect(hotkey.accepts("alt+k")).toBe(true);
+    expect(hotkey.accepts("ctrl+alt+pagedown")).toBe(true);
+  });
+
+  it("refuses a single key, which would fire while typing", () => {
+    expect(hotkey.accepts("ctrl")).toBe(false);
+    expect(hotkey.accepts("f9")).toBe(false);
+  });
+
+  it("refuses what it cannot watch, including junk from a hand-edited settings file", () => {
+    expect(hotkey.accepts("ctrl+banana")).toBe(false);
+    expect(hotkey.accepts("")).toBe(false);
+    expect(hotkey.accepts("+++")).toBe(false);
+  });
+
+  it("maps letters, digits and function keys to their virtual keys", () => {
+    expect(parseBinding("ctrl+k")).toEqual([[0x11], [0x4b]]);
+    expect(parseBinding("alt+7")).toEqual([[0x12], [0x37]]);
+    expect(parseBinding("shift+f12")).toEqual([[0x10], [0x7b]]);
   });
 });
