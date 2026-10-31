@@ -14,3 +14,6 @@ native/mac-helper/build/
 .DS_Store
 .vercel
 .claude/settings.local.json
+
+# Supabase CLI scratch state, not project configuration.
+supabase/.temp/
