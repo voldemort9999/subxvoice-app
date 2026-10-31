@@ -4,11 +4,13 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { DictionaryPage } from "./pages/DictionaryPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { InsightsPage } from "./pages/InsightsPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./pages/SignInPage";
 import { hotkeyLabel } from "./shared/format";
-import { useAccount, useAppInfo, useTheme } from "./shared/hooks";
+import { useAccount, useAppInfo, useTheme, useUsage } from "./shared/hooks";
 import { MoonIcon, SunIcon } from "./shared/icons";
+import { ProfileMenu } from "./shared/ProfileMenu";
 import { type PageId, Sidebar } from "./shared/Sidebar";
 import { IconButton } from "./shared/ui";
 
@@ -25,6 +27,7 @@ export function App() {
   const [theme, setTheme] = useTheme();
   const account = useAccount();
   const info = useAppInfo();
+  const usage = useUsage();
   const hotkey = hotkeyLabel(info?.hotkeys[0]?.keys);
   // Dictation runs on the account's session, so without one there is nothing the app can do.
   const ready = Boolean(info?.providers.stt && account?.signedIn);
@@ -33,21 +36,26 @@ export function App() {
   // sign-in form at someone who is already signed in.
   if (!account) return <div className="h-full bg-canvas" />;
   if (!account.signedIn) return <SignInPage />;
+  // Asked once: a name, and the key they will hold every time.
+  if (!account.onboarded) return <OnboardingPage info={info} email={account.email} />;
 
   return (
     <div className="flex h-full bg-canvas">
-      <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} ready={ready} />
+      <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} ready={ready} usage={usage} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           className={`flex h-12 shrink-0 items-center justify-between gap-4 border-b border-line px-6 ${TITLE_BAR_DRAG}`}
         >
           <h1 className="text-[15px] font-semibold tracking-tight">{TITLES[page]}</h1>
-          <IconButton
-            icon={theme === "dark" ? SunIcon : MoonIcon}
-            label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          />
+          <div className="flex items-center gap-1.5">
+            <IconButton
+              icon={theme === "dark" ? SunIcon : MoonIcon}
+              label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            />
+            <ProfileMenu account={account} />
+          </div>
         </header>
 
         <main className="scroll-area flex-1 overflow-y-auto">

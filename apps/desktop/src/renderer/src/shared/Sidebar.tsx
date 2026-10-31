@@ -1,5 +1,7 @@
 import { SidebarTop } from "@platform/Chrome";
 import type { ComponentType } from "react";
+import type { Usage } from "../../../shared/ipc";
+import { formatSpan } from "./format";
 import { BookIcon, ChartIcon, HistoryIcon, HomeIcon, MicIcon, SettingsIcon } from "./icons";
 
 export type PageId = "dashboard" | "insights" | "history" | "dictionary" | "settings";
@@ -37,12 +39,15 @@ export function Sidebar({
   onNavigate,
   hotkey,
   ready,
+  usage,
 }: {
   page: PageId;
   onNavigate: (page: PageId) => void;
   hotkey: string;
   ready: boolean;
+  usage: Usage | null;
 }) {
+  const exhausted = usage ? usage.remaining <= 0 : false;
   return (
     <nav className="flex w-[216px] shrink-0 flex-col border-r border-line bg-surface">
       <SidebarTop />
@@ -97,16 +102,25 @@ export function Sidebar({
       <div className="m-3 rounded-lg border border-line bg-raised p-3">
         <div className="flex items-center gap-2">
           <span
-            className={`h-1.5 w-1.5 rounded-full ${ready ? "bg-speech" : "bg-warn"}`}
+            className={`h-1.5 w-1.5 rounded-full ${exhausted ? "bg-warn" : ready ? "bg-speech" : "bg-warn"}`}
             aria-hidden="true"
           />
-          <p className="font-medium">{ready ? "Ready to dictate" : "Setup needed"}</p>
-        </div>
-        {ready ? (
-          <p className="mt-1.5 flex items-center gap-1.5 text-muted">
-            <MicIcon className="h-3.5 w-3.5 shrink-0" />
-            Hold <span className="font-medium text-ink">{hotkey}</span>
+          <p className="font-medium">
+            {exhausted ? "Daily limit reached" : ready ? "Ready to dictate" : "Setup needed"}
           </p>
+        </div>
+        {exhausted ? (
+          <p className="mt-1.5 text-muted">Dictation is back tomorrow.</p>
+        ) : ready ? (
+          <>
+            <p className="mt-1.5 flex items-center gap-1.5 text-muted">
+              <MicIcon className="h-3.5 w-3.5 shrink-0" />
+              Hold <span className="font-medium text-ink">{hotkey}</span>
+            </p>
+            {usage && (
+              <p className="mt-1 text-xs text-faint">{formatSpan(usage.remaining * 1000)} left today</p>
+            )}
+          </>
         ) : (
           <button
             type="button"

@@ -147,6 +147,8 @@ async function start(): Promise<void> {
     account.signUp(asText(email, "email"), asText(password, "password")),
   );
   ipcMain.handle(IPC.authSignOut, () => account.signOut());
+  ipcMain.handle(IPC.authUsage, () => account.usage());
+  ipcMain.handle(IPC.authSetProfile, (_event, name: unknown) => account.setProfile(asText(name, "name")));
   account.onChanged((state) => {
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send(IPC.authChanged, state);
@@ -230,6 +232,7 @@ async function start(): Promise<void> {
       newId: randomUUID,
       // Show the words as heard while the model is still cleaning them up.
       onHeard: (text) => pill.setState({ kind: "processing", message: text }),
+      remainingSeconds: async () => (await account.usage())?.remaining ?? null,
       onHistoryChanged: notifyHistoryChanged,
       log: (line) => console.log(line),
     }),

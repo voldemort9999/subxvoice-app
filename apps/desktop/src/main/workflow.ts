@@ -27,6 +27,11 @@ export interface WorkflowDeps {
   /** Raw words as heard, shown while the model is still formatting them. */
   onHeard(text: string): void;
   onHistoryChanged(): void;
+  /**
+   * Today's remaining dictation seconds, asked for only when opening fails — the happy path must
+   * not pay for a round trip it does not need.
+   */
+  remainingSeconds?(): Promise<number | null>;
   log?(line: string): void;
 }
 
@@ -41,10 +46,21 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
 
       // Opening here, on key-press, is what keeps release→paste short: the socket is already
       // warm and the words are recognised while the user is still speaking.
-      const session = await deps.pipeline.open(mode, context, {
-        script: settings.script,
-        onTranscript: deps.onHeard,
-      });
+      let session: Awaited<ReturnType<Pipeline["open"]>>;
+      try {
+        session = await deps.pipeline.open(mode, context, {
+          script: settings.script,
+          onTranscript: deps.onHeard,
+        });
+      } catch (error) {
+        // The backend refuses an exhausted account before the upgrade, which reaches the app as a
+        // plain connection failure. Saying "sign in again" there would send the user nowhere.
+        const remaining = await deps.remainingSeconds?.().catch(() => null);
+        if (remaining !== null && remaining !== undefined && remaining <= 0) {
+          throw new Error("You've used today's dictation time. It resets tomorrow.");
+        }
+        throw error;
+      }
 
       return {
         push: (samples) => session.push(samples),

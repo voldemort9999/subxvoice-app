@@ -8,19 +8,33 @@
 // Auth is the platform's: this function is deployed with JWT verification on, so a request only
 // reaches the handler with a valid Supabase session.
 import WS from "npm:ws@8.18.0";
+import { addUsage, secondsOf, usageFor, userIdFrom } from "../_shared/usage.ts";
 
 const GNANI_URL = "wss://api.vachana.ai/stt/v3/stream";
 
 /** Session settings the app chooses. The key is ours and is never taken from the request. */
 const FORWARDED = ["x-sample-rate", "language_code", "model", "format", "keyterms"];
 
-Deno.serve((request) => {
+Deno.serve(async (request) => {
   if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
     return new Response("This endpoint speaks websocket only.", { status: 426 });
   }
 
   const apiKey = Deno.env.get("GNANI_API_KEY");
   if (!apiKey) return new Response("Speech-to-text is not configured.", { status: 503 });
+
+  // The gateway has already verified the session; this is only reading whose it is.
+  const userId = userIdFrom(request.headers.get("authorization"));
+  if (!userId) return new Response("Sign in first.", { status: 401 });
+
+  // Checked before a single frame is forwarded, so an exhausted account costs nothing upstream.
+  const usage = await usageFor(userId);
+  if (usage.remaining <= 0) {
+    return new Response(JSON.stringify({ error: "daily_limit", used: usage.used, limit: usage.limit }), {
+      status: 429,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   const headers: Record<string, string> = { "x-api-key-id": apiKey };
   for (const name of FORWARDED) {
@@ -32,6 +46,15 @@ Deno.serve((request) => {
 
   let upstream: WS | null = null;
   let upstreamOpen = false;
+  // Counted from the audio actually relayed, so it does not depend on the app being honest.
+  let audioBytes = 0;
+  let recorded = false;
+
+  const record = () => {
+    if (recorded) return;
+    recorded = true;
+    void addUsage(userId, secondsOf(audioBytes));
+  };
   // Audio can arrive before Gnani finishes its handshake; holding it is better than dropping the
   // first word of a dictation.
   let backlog: (Uint8Array | string)[] = [];
@@ -86,12 +109,20 @@ Deno.serve((request) => {
   client.onmessage = (event) => {
     const data = event.data;
     const frame = typeof data === "string" ? data : new Uint8Array(data as ArrayBuffer);
+    if (typeof data !== "string") audioBytes += (data as ArrayBuffer).byteLength;
     if (upstreamOpen && upstream) upstream.send(frame);
     else backlog.push(frame);
   };
 
-  client.onclose = () => closeUpstream();
-  client.onerror = () => closeUpstream();
+  // Written when the dictation ends, however it ends.
+  client.onclose = () => {
+    record();
+    closeUpstream();
+  };
+  client.onerror = () => {
+    record();
+    closeUpstream();
+  };
 
   function closeClient() {
     try {

@@ -13,17 +13,42 @@ export function SignInPage() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [created, setCreated] = useState(false);
+
+  // Caught here rather than at the server, which only ever sees one of the two.
+  const mismatch = mode === "up" && confirm.length > 0 && password !== confirm;
+
+  function switchTo(next: "in" | "up") {
+    setMode(next);
+    setProblem(null);
+    setCreated(false);
+    setConfirm("");
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (mode === "up" && password !== confirm) {
+      setProblem("The two passwords don't match.");
+      return;
+    }
     setBusy(true);
     setProblem(null);
     try {
-      if (mode === "up") await window.subx.auth.signUp(email, password);
-      else await window.subx.auth.signIn(email, password);
-      // The window swaps itself out when the account state changes; nothing to do here.
+      if (mode === "up") {
+        await window.subx.auth.signUp(email, password);
+        // Signing up deliberately does not sign you in: the first thing you do with the password
+        // you just chose is use it.
+        setMode("in");
+        setCreated(true);
+        setPassword("");
+        setConfirm("");
+      } else {
+        await window.subx.auth.signIn(email, password);
+        // The window swaps itself out when the account state changes; nothing to do here.
+      }
     } catch (error) {
       setProblem(readable(error));
     } finally {
@@ -84,13 +109,35 @@ export function SignInPage() {
             />
           </label>
 
+          {mode === "up" && (
+            <label className="block space-y-1.5">
+              <span className="font-medium">Confirm password</span>
+              <input
+                className={`${INPUT} ${mismatch ? "border-danger" : ""}`}
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+                placeholder="Type it again"
+              />
+              {mismatch && <span className="block text-danger">The two passwords don't match.</span>}
+            </label>
+          )}
+
+          {created && (
+            <p role="status" className="rounded-lg bg-speech-soft px-3 py-2 text-speech">
+              Account created. Sign in with it now.
+            </p>
+          )}
+
           {problem && (
             <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-danger">
               {problem}
             </p>
           )}
 
-          <Button type="submit" variant="primary" disabled={busy} className="w-full py-2">
+          <Button type="submit" variant="primary" disabled={busy || mismatch} className="w-full py-2">
             {busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}
           </Button>
         </form>
@@ -99,10 +146,7 @@ export function SignInPage() {
           {mode === "in" ? "No account yet? " : "Already have one? "}
           <button
             type="button"
-            onClick={() => {
-              setMode(mode === "in" ? "up" : "in");
-              setProblem(null);
-            }}
+            onClick={() => switchTo(mode === "in" ? "up" : "in")}
             className="font-medium text-accent hover:underline"
           >
             {mode === "in" ? "Create one" : "Sign in"}

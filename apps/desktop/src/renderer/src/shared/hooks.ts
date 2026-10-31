@@ -6,6 +6,7 @@ import type {
   AppSettings,
   MicrophoneOption,
   PermissionStatus,
+  Usage,
 } from "../../../shared/ipc";
 
 /** All recordings, newest first. `null` while loading. Refreshes when a new one is saved. */
@@ -121,4 +122,15 @@ export function useAccount(): AccountState | null {
     return window.subx.auth.onChanged(setState);
   }, []);
   return state;
+}
+
+/** Dictation time left today. Re-read whenever a dictation finishes, which is what changes it. */
+export function useUsage(): Usage | null {
+  const [usage, setUsage] = useState<Usage | null>(null);
+  useEffect(() => {
+    const load = () => void window.subx.auth.usage().then(setUsage);
+    load();
+    return window.subx.history.onChanged(load);
+  }, []);
+  return usage;
 }

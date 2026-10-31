@@ -15,6 +15,8 @@ export const IPC = {
   authSignIn: "auth:sign-in",
   authSignUp: "auth:sign-up",
   authSignOut: "auth:sign-out",
+  authSetProfile: "auth:set-profile",
+  authUsage: "auth:usage",
   authChanged: "auth:changed",
   openRecordingsFolder: "app:open-recordings-folder",
   permissionList: "permissions:list",
@@ -69,10 +71,21 @@ export interface AppSettings {
   microphoneId: string;
 }
 
+/** Dictation time used today, and what is left of the daily allowance. */
+export interface Usage {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
 /** Who is signed in. The app needs an account before it can dictate. */
 export interface AccountState {
   email: string | null;
   signedIn: boolean;
+  /** What the user asked to be called. Empty until they finish setting up. */
+  name: string;
+  /** False until the name and hotkey have been chosen once. */
+  onboarded: boolean;
 }
 
 export interface MicrophoneOption {
@@ -104,6 +117,8 @@ export interface SubxApi {
     signIn(email: string, password: string): Promise<void>;
     signUp(email: string, password: string): Promise<void>;
     signOut(): Promise<void>;
+    setProfile(name: string): Promise<void>;
+    usage(): Promise<Usage | null>;
     onChanged(listener: (state: AccountState) => void): () => void;
   };
   app: {

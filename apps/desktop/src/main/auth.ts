@@ -16,10 +16,22 @@ const SUPABASE_ANON_KEY =
 
 export const STT_URL = `${SUPABASE_URL.replace("https://", "wss://")}/functions/v1/stt`;
 export const LLM_URL = `${SUPABASE_URL}/functions/v1/llm`;
+const USAGE_URL = `${SUPABASE_URL}/functions/v1/usage`;
+
+/** Dictation time used today, and what is left of the daily allowance. */
+export interface Usage {
+  used: number;
+  limit: number;
+  remaining: number;
+}
 
 export interface AccountState {
   email: string | null;
   signedIn: boolean;
+  /** What the user asked to be called. Empty until they finish setting up. */
+  name: string;
+  /** False until the name and hotkey have been chosen once. */
+  onboarded: boolean;
 }
 
 /**
@@ -56,9 +68,15 @@ export class Account {
     if (error) await this.forget();
   }
 
+  /**
+   * Creating an account does not sign you in: the user is sent back to the sign-in form, so the
+   * password they just chose is the one they immediately use.
+   */
   async signUp(email: string, password: string): Promise<void> {
     const { error } = await this.client.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
+    await this.client.auth.signOut();
+    await this.forget();
   }
 
   async signIn(email: string, password: string): Promise<void> {
@@ -73,7 +91,23 @@ export class Account {
 
   async state(): Promise<AccountState> {
     const { data } = await this.client.auth.getSession();
-    return { email: data.session?.user.email ?? null, signedIn: !!data.session };
+    const metadata = data.session?.user.user_metadata ?? {};
+    return {
+      email: data.session?.user.email ?? null,
+      signedIn: !!data.session,
+      name: typeof metadata.name === "string" ? metadata.name : "",
+      onboarded: metadata.onboarded === true,
+    };
+  }
+
+  /**
+   * The name lives on the user, not in a table: it is one string, it belongs to the account, and
+   * a table would need its own policies to say the same thing.
+   */
+  async setProfile(name: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({ data: { name, onboarded: true } });
+    if (error) throw new Error(error.message);
+    this.announce();
   }
 
   /**
@@ -83,6 +117,22 @@ export class Account {
   async token(): Promise<string> {
     const { data } = await this.client.auth.getSession();
     return data.session?.access_token ?? "";
+  }
+
+  /**
+   * Today's usage, straight from the server — the app never computes it, because a limit the
+   * client works out is a limit the client can be wrong about. Null when it cannot be read.
+   */
+  async usage(): Promise<Usage | null> {
+    const token = await this.token();
+    if (!token) return null;
+    try {
+      const response = await fetch(USAGE_URL, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return null;
+      return (await response.json()) as Usage;
+    } catch {
+      return null;
+    }
   }
 
   onChanged(listener: (state: AccountState) => void): () => void {

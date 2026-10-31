@@ -14,6 +14,8 @@ const api: SubxApi = {
     signIn: (email, password) => ipcRenderer.invoke(IPC.authSignIn, email, password),
     signUp: (email, password) => ipcRenderer.invoke(IPC.authSignUp, email, password),
     signOut: () => ipcRenderer.invoke(IPC.authSignOut),
+    setProfile: (name) => ipcRenderer.invoke(IPC.authSetProfile, name),
+    usage: () => ipcRenderer.invoke(IPC.authUsage),
     onChanged: (listener) => subscribe(IPC.authChanged, listener),
   },
   app: {
