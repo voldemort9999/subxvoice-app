@@ -23,7 +23,7 @@ import { nativeMic, PillMic } from "./mic";
 import { PillWindow } from "./pill";
 import { createPlatform } from "./platform";
 import { createEngines, loadDevEnv } from "./providers";
-import { deleteRecording, recordingsDir, saveRecording } from "./recordings";
+import { deleteRecording, recordingsDir, saveRecording, setRecordingsDir } from "./recordings";
 import { loadPage, PRELOAD_PATH } from "./renderer";
 import { JsonDictionaryStore, JsonHistoryStore, JsonSettingsStore } from "./stores";
 import { createTray } from "./tray";
@@ -128,9 +128,26 @@ async function start(): Promise<void> {
   // Signing in once should last; a session that no longer refreshes just asks again.
   await account.restore();
   engines = createEngines(account);
-  const history = new JsonHistoryStore(join(dataDir, "history.json"));
-  const dictionary = new JsonDictionaryStore(join(dataDir, "dictionary.json"));
-  const settings = new JsonSettingsStore<AppSettings>(join(dataDir, "settings.json"), {
+  // Transcripts, dictionary and audio belong to the person signed in, not to the machine. They
+  // live in a folder named after the account so the next person to sign in starts empty.
+  let accountDir = join(dataDir, "accounts", "signed-out");
+  const history = new JsonHistoryStore(() => join(accountDir, "history.json"));
+  const dictionary = new JsonDictionaryStore(() => join(accountDir, "dictionary.json"));
+
+  const switchAccountData = async (userId: string | null) => {
+    accountDir = join(dataDir, "accounts", userId ?? "signed-out");
+    await mkdir(accountDir, { recursive: true });
+    setRecordingsDir(join(accountDir, "recordings"));
+    history.forget();
+    dictionary.forget();
+  };
+
+  // Point at the restored account's folder before anything reads from it.
+  await switchAccountData((await account.state()).id);
+
+  // Settings stay with the machine: the hotkey, microphone and startup choice describe this
+  // computer, not the person.
+  const settings = new JsonSettingsStore<AppSettings>(() => join(dataDir, "settings.json"), {
     hotkey: platform.hotkey.defaultBindings()[0]?.keys ?? "",
     script: "roman",
     microphoneId: "",
@@ -169,6 +186,8 @@ async function start(): Promise<void> {
   ipcMain.handle(IPC.authUsage, () => account.usage());
   ipcMain.handle(IPC.authSetProfile, (_event, name: unknown) => account.setProfile(asText(name, "name")));
   account.onChanged((state) => {
+    // Switching accounts switches the data with it, and signing out puts it out of reach.
+    void switchAccountData(state.id).then(() => notifyHistoryChanged());
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send(IPC.authChanged, state);
     }

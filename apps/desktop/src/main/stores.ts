@@ -4,18 +4,19 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import type { DictionaryEntry, DictionaryStore, HistoryStore, SessionRecord } from "@subx/core";
 
 class JsonFile<T> {
-  private readonly path: string;
+  private readonly path: () => string;
   private readonly fallback: T;
   private pending: Promise<void> = Promise.resolve();
 
-  constructor(path: string, fallback: T) {
+  /** The path is read per call: a sign-in moves these files to that account's own folder. */
+  constructor(path: () => string, fallback: T) {
     this.path = path;
     this.fallback = fallback;
   }
 
   async read(): Promise<T> {
     try {
-      return JSON.parse(await readFile(this.path, "utf8")) as T;
+      return JSON.parse(await readFile(this.path(), "utf8")) as T;
     } catch {
       return this.fallback;
     }
@@ -24,9 +25,10 @@ class JsonFile<T> {
   /** Writes are queued and atomic (temp file + rename), so a crash never leaves half a file. */
   write(value: T): Promise<void> {
     this.pending = this.pending.then(async () => {
-      const temp = `${this.path}.tmp`;
+      const path = this.path();
+      const temp = `${path}.tmp`;
       await writeFile(temp, JSON.stringify(value));
-      await rename(temp, this.path);
+      await rename(temp, path);
     });
     return this.pending;
   }
@@ -36,8 +38,13 @@ export class JsonHistoryStore implements HistoryStore {
   private readonly file: JsonFile<SessionRecord[]>;
   private records: SessionRecord[] | null = null;
 
-  constructor(path: string) {
+  constructor(path: () => string) {
     this.file = new JsonFile(path, []);
+  }
+
+  /** Drop what is held in memory, because it belongs to the account that just signed out. */
+  forget(): void {
+    this.records = null;
   }
 
   async save(record: SessionRecord): Promise<void> {
@@ -80,8 +87,13 @@ export class JsonDictionaryStore implements DictionaryStore {
   private readonly file: JsonFile<DictionaryEntry[]>;
   private entries: DictionaryEntry[] | null = null;
 
-  constructor(path: string) {
+  constructor(path: () => string) {
     this.file = new JsonFile(path, []);
+  }
+
+  /** Drop what is held in memory, because it belongs to the account that just signed out. */
+  forget(): void {
+    this.entries = null;
   }
 
   async all(): Promise<DictionaryEntry[]> {
@@ -114,7 +126,7 @@ export class JsonSettingsStore<T extends object> {
   /** Only the fields the user has explicitly set — never the defaults themselves. */
   private stored: Partial<T> | null = null;
 
-  constructor(path: string, defaults: T) {
+  constructor(path: () => string, defaults: T) {
     this.file = new JsonFile(path, {});
     this.defaults = defaults;
   }

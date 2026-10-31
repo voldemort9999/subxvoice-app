@@ -26,6 +26,8 @@ export interface Usage {
 }
 
 export interface AccountState {
+  /** The Supabase user id, used to keep each account's data apart on disk. */
+  id: string | null;
   email: string | null;
   signedIn: boolean;
   /** What the user asked to be called. Empty until they finish setting up. */
@@ -93,6 +95,7 @@ export class Account {
     const { data } = await this.client.auth.getSession();
     const metadata = data.session?.user.user_metadata ?? {};
     return {
+      id: data.session?.user.id ?? null,
       email: data.session?.user.email ?? null,
       signedIn: !!data.session,
       name: typeof metadata.name === "string" ? metadata.name : "",

@@ -3,7 +3,17 @@ import { join } from "node:path";
 import type { AudioClip } from "@subx/core";
 import { app } from "electron";
 
-export const recordingsDir = () => join(app.getPath("userData"), "recordings");
+/**
+ * Where the current account's audio lives. Set when an account signs in, so one person's voice is
+ * never in the folder the next person opens.
+ */
+let currentDir = join(app.getPath("userData"), "recordings");
+
+export const recordingsDir = () => currentDir;
+
+export function setRecordingsDir(dir: string): void {
+  currentDir = dir;
+}
 
 /** Saves a clip as a WAV file in the app's local data folder and returns its path. */
 export async function saveRecording(clip: AudioClip): Promise<string> {

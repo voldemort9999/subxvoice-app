@@ -82,6 +82,8 @@ export interface Usage {
 
 /** Who is signed in. The app needs an account before it can dictate. */
 export interface AccountState {
+  /** The Supabase user id, used to keep each account's data apart on disk. */
+  id: string | null;
   email: string | null;
   signedIn: boolean;
   /** What the user asked to be called. Empty until they finish setting up. */
