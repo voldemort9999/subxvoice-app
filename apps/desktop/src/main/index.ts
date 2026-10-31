@@ -8,7 +8,7 @@ import {
   Pipeline,
   SubxError,
 } from "@subx/core";
-import { app, BrowserWindow, ipcMain, shell, type Tray } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, shell, type Tray } from "electron";
 import {
   type AppInfo,
   type AppSettings,
@@ -257,6 +257,10 @@ async function start(): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  // Windows and Linux draw the menu inside our own window, where File/Edit/View belongs to no
+  // feature this app has. macOS keeps its menu: it is the system menu bar, and dropping it would
+  // take the app menu and the standard editing shortcuts with it.
+  if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   void start();
   app.on("activate", openMainWindow);
 });
