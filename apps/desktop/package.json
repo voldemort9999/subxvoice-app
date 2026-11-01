@@ -1,5 +1,6 @@
 {
   "name": "@subx/desktop",
+  "productName": "SUBXVoice",
   "version": "0.1.0",
   "private": true,
   "description": "SUBXVoice desktop app",

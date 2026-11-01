@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync, renameSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -31,6 +32,30 @@ import { checkForUpdate, installUpdate, startUpdater, updateState } from "./upda
 import { createWorkflow } from "./workflow";
 
 const HOTKEY_RETRY_MS = 3000;
+
+/**
+ * Settings, history, the dictionary and every recording live under `userData`, whose default is
+ * named after the app. That name was the package name until 0.1.1 — `@subx/desktop`, which
+ * Windows showed as `AppData\Roaming\@subx\desktop` and installed into `Programs\@subxdesktop`.
+ * Naming the product fixed both, and moves the folder, so an upgrading install is carried over
+ * rather than waking up with no history and signed out.
+ *
+ * Runs before anything reads a path, and only when there is nothing at the new location.
+ */
+function migrateUserData(): void {
+  const previous = join(app.getPath("appData"), "@subx", "desktop");
+  const current = app.getPath("userData");
+  if (existsSync(current) || !existsSync(previous)) return;
+  try {
+    renameSync(previous, current);
+    console.log("Moved your data from the old @subx folder.");
+  } catch (error) {
+    // Not fatal: the app still starts, just empty. Losing the old folder is better than refusing
+    // to open, and the data is still on disk where the user can reach it.
+    console.error("Could not move the old data folder:", error);
+  }
+}
+migrateUserData();
 
 loadDevEnv();
 const platform = createPlatform();
