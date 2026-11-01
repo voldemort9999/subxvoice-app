@@ -375,3 +375,213 @@ Still stale, not changed:
 
 - `AGENTS.md:11` and `README.md:10-11` still describe the two-person split (Aryan owns macOS, his
   teammate owns Windows). Left alone because the team shape for the new project was not stated.
+
+---
+
+## S-009 · 2026-10-30 · Gnani replaces Soniox; the window becomes a dashboard
+
+Asked:
+> soniox ki jagah hame Gnani AI ka use krna hai ... soniox hata ke gnani laga do, deeply adapt karo
+> na ki bas swap
+> ... ab iska UI dekho, bahut hi limited cheezein hain. Dashboard achha banao, SaaS product jaisa
+> ... history wale section me Copy button bhi laga do
+> ... "Below Voice", "Restore Flow" uske baare me deep research karo
+
+Done:
+
+- Probed `wss://api.vachana.ai/stt/v3/stream` directly with throwaway Node scripts **before** reading
+  far into the docs, and the probes contradicted the docs three times (see "Did not work").
+- Wrote `packages/providers/src/stt/gnani.ts`; deleted `soniox.ts` and `region.test.ts`. Model
+  `prisma-v3.0`, locale `hi-IN`, `format=verbatim`. 17 unit tests in `gnani.test.ts` against a
+  `FakeSocket` that stands in for the global `WebSocket`.
+- Renamed every `SONIOX_*` env var to `GNANI_*` across `.env`, `.env.example`, `main/providers.ts`,
+  `SettingsPage.tsx`, `workflow.test.ts`, `CLAUDE.md`, `readme.md`, `docs/*`.
+- Implemented `packages/platform-win/src/context.ts` (was `notImplemented`): `GetForegroundWindow` +
+  `GetWindowTextW` + `GetWindowThreadProcessId` + `OpenProcess`/`QueryFullProcessImageNameW`, added
+  to the existing koffi bindings in `win32.ts`. Verified the FFI in a standalone `.cjs` probe first,
+  which returned `Code.exe` and the VS Code window title.
+- Rebuilt the renderer: new `pages/DashboardPage.tsx`, `pages/InsightsPage.tsx`, `shared/ui.tsx`
+  (Card/Stat/Badge/Button/CopyButton/Segmented/Field), `shared/stats.ts` (pure analytics + 14
+  tests), dark-first tokens in `styles.css`. Deleted `HomePage.tsx` and `PageHeader.tsx`.
+- History gained the Copy button the user asked for, plus search, All/Hindi/Long filters and a
+  text export. `HistoryRow` expands to show the raw transcript.
+- Measured the swap on the user's own recordings, streaming at mic cadence through the real
+  provider: release→text 213–478 ms (Soniox was ~52 ms); transcripts in `docs/decisions.md`.
+
+Did not work:
+
+- **The docs were wrong three times.** `language_code` does *not* take a comma-separated list —
+  `hi-IN,en-IN` is rejected. `indic-auto` exists but guessed **Telugu** on a Hindi-English clip and
+  returned Telugu script. `update_settings` with keyterms returned `bias_word_count: 0`, i.e. it
+  silently does not apply; only the `keyterms` upgrade header works.
+- **Devanagari dictionary terms crash the WebSocket constructor** outright: `value 2349 > 255`. Any
+  header value above U+00FF does. `headerSafeTerms()` now drops them (also commas and CR/LF).
+- **`transcribe()` returned empty text** on a real clip while streaming worked. Cause: the batch path
+  dumps the whole clip and commits immediately, so `speech_start` has not arrived, `openUtterances`
+  is empty, and `finish()` returns straight away. Fixed in the batch path (quiet-window settle), not
+  in `finish()`, so the streaming tail pays nothing.
+- **Multi-segment batch clips were truncated** to the first transcript — nothing announces that a
+  committed clip is finished, so it now settles on a quiet window instead.
+- **Cloudflare started returning 403** to `api.vachana.ai` from this IP after roughly forty probe
+  connections. It cleared after a pause. Worth knowing before concluding a key is bad.
+- **The latency harness lied, twice.** `measure.mjs` closed the socket on the *first* message, so the
+  relay looked like it timed out; and it first measured "first transcript after commit", which comes
+  out negative because VAD closes segments mid-clip. The number that matters is commit → *last*
+  transcript.
+- **Driving the UI with synthetic clicks closed the app.** `keybd_event(ALT)` — the usual trick that
+  lets a background process call `SetForegroundWindow` — opened the native menu bar, and the next
+  click landed in it and closed the main window. Do not drive this app with synthetic input; restart
+  it with a different default page instead.
+- Screenshot plumbing, three separate failures: `SetForegroundWindow` from a background process is
+  blocked, so `CopyFromScreen` captured whatever was actually in front (a wallpaper) — `PrintWindow`
+  with `PW_RENDERFULLCONTENT` works regardless of z-order; `Add-Type` needs
+  `-ReferencedAssemblies System.Drawing`; and a C# method named `Main` makes `Add-Type` fail with
+  "wrong signature to be an entry point".
+- Two bugs found only by looking at the screenshot: the four stat cards stacked 2x2 because Tailwind
+  breakpoints are **viewport**-based and the window is 1000 px wide (`lg:` never fires — use `md:`),
+  and a streak of 1 day read "Dictate today to start one".
+
+Established:
+
+- Gnani's protocol: config and key travel on the **upgrade request**, not in a message after
+  connecting; audio is fixed 1024-byte frames; `transcript` messages are always final (there are no
+  interim results); and a `commit` with nothing to flush is answered with **silence**, so `finish()`
+  must track `utterance_id` rather than wait unconditionally. All of this is in `CLAUDE.md` gotchas.
+- `prisma-v3.0` writes Indian-accented English in **Latin**; `prisma-v2.5` writes it in Devanagari.
+  That removes the S-005 "Pleez note dait" class of bug at the STT layer, and means pure-English
+  dictation now skips the LLM entirely via `needsTransliteration`.
+- `format=transliterate` returns Roman script directly but **paraphrases** (मैं अभी वाइवा दे रहा हूँ
+  came back as "main abhi vaivada de raavu"), so it cannot replace the LLM pass.
+- The supplied template `tailwindadmin-v1.0.0.zip` is static HTML + gulp + Preline, not React. Only
+  its design language was portable; both sides are Tailwind v4, so utilities carried over directly.
+- Competitor research (Wispr Flow, Willow Voice) found no evidence either exposes a usage dashboard.
+  Their shared features are system-wide dictation, filler-word cleanup, snippets, custom dictionary.
+
+User decided:
+
+- **Gnani replaces Soniox** — a project requirement, not a measurement. The slower tail was accepted.
+- Dashboard scope: SaaS dashboard plus analytics derived from the history already kept, and **no**
+  new pipeline features; dark-first with an indigo accent; Windows active-app detection yes.
+
+See `docs/decisions.md` 2026-10-30 for the model, locale and format reasoning.
+
+---
+
+## S-010 · 2026-10-31 · Supabase backend, accounts, daily limit, and a silent failure that was not the bug it looked like
+
+Asked:
+> settings me jo hotkeys hain, radio buttons mat karo ... user apne hisaab se koi bhi key set kar
+> sake, do keys ka ho ya do se zyada
+> ... iska deployment ka batao, minimum se minimum, security bhi honi chahiye
+> ... short-lived token deta hai ya nahi, tum khud check karke batao
+> ... jo OpenAI API se transliteration hota hai woh nahi ho raha ... directly Hindi text me hi paste
+> ho ja raha hai, lekin maine Roman letters select kar rakha hai
+> ... koi logout karke phir se login kare, ya logout bhi kare, toh nahi kaam karna chahiye
+> ... har baar jab koi naya account banayega toh completely sab kuch khaali hoga
+
+Done:
+
+- `Menu.setApplicationMenu(null)` on non-darwin — the File/Edit/View bar mapped to nothing here.
+- Hotkey: `parseBinding` already split on `+`, so the Windows vocabulary grew from four modifiers to
+  letters, digits, F1–F24 and the navigation block (generated from ranges, not hand-listed). Added
+  `Hotkey.accepts()` to the core contract; `supportedKeys()` demoted from allowlist to suggestions.
+  New `shared/hotkeys.ts` (`comboFrom`, `keyName`) and `HotkeyRecorder.tsx`. Radio buttons in
+  Settings replaced by a `Select`; `Choice.tsx` deleted.
+- `main/brand.ts` draws the sidebar's waveform mark procedurally; used for the window icon (taskbar,
+  Alt-Tab) and, flat and monochrome, for the tray.
+- **Answered the Gnani token question by checking**: the docs index (`llms.txt`) has no
+  authentication page at all, only a long-lived `x-api-key-id`, and Gnani's own websocket page says
+  to proxy from a backend "to keep your API key off the client". No short-lived tokens exist.
+- Built the backend on Supabase project `tbtwdryremxatgikigph` (org "Gnani Project"):
+  `supabase/functions/stt` (websocket relay to Gnani), `supabase/functions/llm` (OpenRouter proxy),
+  `supabase/functions/usage`, and shared `_shared/usage.ts`. All deployed with JWT verification on.
+- Auth: email and password, `mailer_autoconfirm = true`, no OAuth, no phone. `main/auth.ts` keeps
+  only the refresh token, through `safeStorage`. Providers now take a **token function**
+  (`TokenSource`) because a session expires while the app is open; `GnaniStt` gained `viaBackend`
+  (Authorization instead of `x-api-key-id`). Every vendor key left `.env`.
+- `SignInPage` (confirm password on sign-up, "Account created. Sign in with it now."),
+  `OnboardingPage` (name, then hotkey), `ProfileMenu` (avatar and sign out).
+- Daily limit: `public.daily_usage` plus `add_usage()` (one statement, so a burst cannot lose an
+  increment to a read-modify-write race) and RLS letting a user read only their own row. The relay
+  counts **the audio bytes it forwards**, so the number does not depend on the app being honest. The
+  day resets on `Asia/Kolkata`, not UTC. Verified both halves: 3 s of audio produced `used: 3`, and
+  forcing the row to 7200 made the relay refuse before the upgrade.
+- Open-at-login toggle (`app.setLoginItemSettings` with `args: ["--hidden"]`, honoured by
+  `startedHidden()` so a login launch stays in the tray).
+- Scoped history, dictionary and recordings to `userData/accounts/<user-id>/`.
+
+Did not work:
+
+- **`WebSocketStream` does not exist in the Supabase Edge Runtime** (`supabase-edge-runtime-1.77.8`,
+  Deno 2.1.4), and Deno's plain `WebSocket` cannot set request headers — which is exactly where
+  Gnani wants its key. `npm:ws@8.18.0` *does* work there, and Gnani accepted the upgrade. Found by
+  deploying a throwaway `wsprobe` function, not by reading.
+- **The upstream socket must be opened from `client.onopen`.** Creating it beside
+  `Deno.upgradeWebSocket`, before the handler returns the upgrade response, leaves the client
+  connection dead. A `setTimeout(start, 0)` fallback fires early enough to reproduce exactly the
+  same breakage; removing it fixed it.
+- **`ws` hands every frame over as a `Buffer`**, so `typeof data === "string"` is never true and each
+  JSON transcript was relayed as **binary**, which the app's `receive()` ignores. The frame's own
+  `isBinary` flag is what separates text from audio.
+- **Could not create a new Supabase project**: the free plan allows two active projects per owner and
+  both were in use. Reused the existing project in the org and renamed it, so the database sits in
+  `eu-west-1`. Harmless for audio, because Edge Functions run near the *user*, not near the project.
+- **Supabase log tables are not reachable** through the Management API here: `logs.all` has been
+  removed, and `function_logs`, `function_edge_logs` and `edge_logs` all return "Table does not
+  exist". Debugging had to go through messages sent over the client socket instead.
+- `Start-Process -FilePath "pnpm"` silently starts nothing (it is a `.cmd` shim) and needs
+  `cmd.exe /c`. Separately, a Python `str.replace` containing `\n` inside a PowerShell string wrote a
+  real newline into the script and broke it.
+- **Chased the pill as a bug it was not.** Concluded the pill window was missing; it was present and
+  correctly placed. The machine has two monitors (primary 2560x1440 at 0,0; secondary 1080x1920
+  portrait at -1080,-407), and `1160,1320` is the correct bottom-centre of the primary. The earlier
+  enumeration simply ran before the window had appeared.
+- **The "transliteration is broken" report was a silent failure, not a broken feature.** Verified the
+  whole pipeline through the backend (Devanagari in, Roman out) and the real `transliteratePrompt()`
+  through the proxy (क्या हाल मेरे दोस्त → "Kya haal mere dost?"). History showed `final == raw`,
+  `llmMs=699`, `rewriteError=None`: the call succeeded and returned the input unchanged, and
+  `pipeline.ts` had a bare `catch { return text }` hiding every failure on that path.
+- biome: `useAccountDir` was read as a React hook because of the `use` prefix (renamed
+  `switchAccountData`), and `supabase/functions` was being linted against Node globals (excluded).
+
+Established:
+
+- Supabase Edge Functions execute **in the region nearest the user**, not the project's region, and
+  can be pinned with `x-region`. Free-plan wall clock is 150 s, irrelevant here because a dictation
+  socket lives for seconds.
+- Relay cost, three passes on a real recording: release→text **462 ms direct, 503 ms relayed
+  (+41 ms)**. The handshake goes 182 ms → 517 ms, but that runs at key-down while the user is still
+  speaking, and audio is buffered until it completes.
+- The LLM through the proxy measured **~700–1700 ms**, against the ~450 ms benchmarked in S-001. Not
+  investigated.
+- `settings.json` did not exist on this machine, so the app was running on the constructor defaults
+  (`script: "roman"`). The Settings UI had never written it.
+- History, dictionary and recordings were **machine-level**, not per account: a new account saw the
+  previous person's transcripts, and their WAVs stayed in the folder the "Open recordings folder"
+  button opens. Found only because the user asked for a fresh-account check.
+- `void start()` in `main/index.ts` swallowed startup failures, which is indistinguishable from a
+  window that never opens. Now caught and logged.
+
+User decided:
+
+- **Proxy the STT only if it adds under 100 ms**, otherwise keep the key in the app. Measured 41 ms,
+  so it is proxied.
+- **Code signing: skip.** Told that a self-signed certificate does not reduce the SmartScreen
+  warning, chose to leave the build unsigned.
+- **Credit system: build it**, two hours per day — reversing the earlier "rate limiting abhi chhod do".
+- Email and password only, **no OAuth, no OTP, no email confirmation**; and signing up must *not*
+  sign you in, so the password just chosen is the first thing used.
+- Supplied a Supabase access token in chat for a throwaway project they intend to delete.
+
+See `docs/decisions.md` 2026-10-31 for the relay design and the three constraints it is shaped around.
+
+Open:
+
+- **Account-hopping resets the quota.** The two-hour limit is per account; signing out and creating
+  another account grants another two hours. Needs a per-device component (a machine id alongside the
+  user id in `daily_usage`). Raised with the user, not built.
+- Signup is open to anyone with the URL, and there is no email verification.
+- The user's last report — hotkey and pill "not working" — was traced to the silent rewrite failure
+  plus being signed out. Both are fixed, but **they have not retested since**.
+- `AGENTS.md:11` and `readme.md` still describe the two-person Aryan/Windows split, carried over
+  from S-008.

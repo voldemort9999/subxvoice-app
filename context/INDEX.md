@@ -7,97 +7,130 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-10-30 · after S-008 · branch `main` at `a8a3816`, remote `voldemort9999/subxvoice-app`
+Last updated: 2026-11-01 · after S-010 · branch `main` at `1a74224`, remote `voldemort9999/subxvoice-app`
 
 ## Where things stand
 
-SUBXVoice dictates end to end on Windows and, as of Aryan's work, on macOS too. Hold `Ctrl+Win`
-(`fn` on Mac), speak Hindi/English/mixed, release, and Roman-script Hinglish is pasted at the
-cursor in about a second. That was not true a month ago: the app recorded audio and saved it to
-history with no text, and both inserters threw `notImplemented`.
+SUBXVoice dictates end to end on Windows and on macOS. Hold `Ctrl+Win` (`fn` on Mac), speak
+Hindi/English/mixed, release, and Roman-script Hinglish is pasted at the cursor. The two days since
+the repo split changed three things underneath that sentence: the speech vendor, the window, and
+where the credentials live.
 
-What is wired now: Soniox streaming speech-to-text over a websocket that opens on key-**down**, so
-key-up only pays for the tail (~50 ms on the India endpoint); dictionary rules; the command router;
-an OpenRouter transliteration pass on `gpt-oss-120b` routed to Cerebras first, Groq as fallback;
-clipboard paste with the user's full clipboard snapshotted and restored; local history with audio
-replay; a Settings screen shared by both OSes (hotkey picker, script, microphone, engine status).
-Measured release→paste is ~1.1 s, of which STT is ~52 ms — **the LLM is now the dominant cost**,
-which is where any further speed work should go.
+**Speech-to-text is Gnani, not Soniox** (S-009). `prisma-v3.0`, one locale `hi-IN`, over a websocket
+that opens on key-down. The swap was a project requirement rather than a measurement, and it cost
+latency: release→text went from ~52 ms to 213–478 ms. It bought something back — v3.0 writes
+Indian-accented English in Latin script rather than Devanagari, so pure-English dictation now skips
+the LLM pass entirely. Its protocol has sharp edges (config in upgrade headers, a `commit` answered
+with silence, fixed 1024-byte frames); they are written up in `CLAUDE.md` → gotchas, and ignoring
+them produces bugs that look like something else.
 
-Two recent fixes are worth knowing because both looked like different bugs than they were. The app
-appeared to ignore the Roman-script setting; it was actually a settings store that baked the
-defaults of the day into `settings.json`, so an old `native` default kept winning (S-003). Then
-dictated English came out as "Pleez note dait…"; Soniox writes Indian-accented English *in
-Devanagari*, and the prompt was romanising it phonetically instead of recognising English words
-(S-005). Both are fixed and covered by tests.
+**The window is a product, not a settings screen** (S-009). Dashboard, Insights, History,
+Dictionary, Settings, dark by default. Everything on Dashboard and Insights is derived from the
+history already on disk — no new tracking. Windows can now read the foreground window
+(`platform-win/src/context.ts`), so "which app did I dictate into" has real data; macOS still
+reports nothing and the chart says so rather than inventing a bar.
 
-**The repo moved on 2026-10-30 (S-008).** All of the above was built in `aryan-2255/subxvoice`,
-shared with Aryan, where `main` now holds the complete code at `c37bdd4`. Work continues in a fresh
-repo, `voldemort9999/subxvoice-app`, for a separate project: single commit `a8a3816`, same tree,
-no history. The old remote is gone and must not be re-added; local branch `aryan-history` keeps
-that history as a backup. Aryan's own contributions (Mac paste, the shared clipboard module) are
-part of the tree and travelled across.
+**The app holds no vendor keys** (S-010). Gnani has no short-lived tokens — checked, not assumed:
+its docs have no authentication page at all, and Gnani's own guidance is to proxy from a backend. So
+both vendors sit behind Supabase Edge Functions that a signed-in account unlocks:
+`supabase/functions/stt` relays the dictation websocket, `supabase/functions/llm` forwards
+rewriting, `supabase/functions/usage` reports the daily allowance. Measured cost of the relay:
++41 ms on release→text, against a 100 ms budget the user set. The app now opens on email-and-password
+sign-in, then a two-step setup (name, hotkey), and enforces two hours of dictation per account per
+day — counted from the audio the relay actually forwards, so it does not depend on the client being
+honest.
 
-Not built: `apps/api` (backend, login, sync, stats, teams), `packages/mcp` (types and a comment
-only), active-app context reading on either OS, `openApp` on Windows, `native/win-helper`, SQLite
-(history and settings are JSON files). No auth, no sync, no release pipeline exercised yet.
+The hotkey accepts **any combination of two or more keys**, recorded by holding them (S-010).
+Per-account data isolation was a real hole found by the user's own final check: history, dictionary
+and recordings were machine-level, so a new account saw the previous person's transcripts. They now
+live under `userData/accounts/<user-id>/`.
+
+What is **not** built: `apps/api` (the repo still has no backend of its own — Supabase Edge Functions
+are it), `packages/mcp`, active-app context on macOS, `openApp` on Windows, `native/win-helper`,
+SQLite (history and dictionary are JSON files), any release pipeline. The build is unsigned by
+decision.
+
+The last thing the user reported was that the hotkey and the pill "did not work". That was traced:
+the pill was fine (it was correctly placed on their second-monitor setup), and the real fault was a
+`catch { return text }` in `pipeline.ts` that hid every rewrite failure, plus being signed out. Both
+are fixed. **They have not retested since.**
 
 ## Continue from here
 
-Nothing is mid-flight. The working tree is clean and `main` is pushed to the new remote.
+Nothing is mid-flight; the working tree is clean and `main` is pushed.
 
-The obvious next target is **LLM latency**, now ~800–1100 ms of a ~1.1 s release→paste. Options:
-shorter prompt, streaming the completion, or a smaller model for short utterances. Start at
-`packages/core/src/prompts.ts` and `packages/providers/src/llm/openrouter.ts`.
+First thing: **have the user retest a dictation end to end** — sign in, complete setup, hold the
+hotkey. Every failure path now reports itself (an amber dot on the pill, "went in as heard" in
+History, `SessionRecord.rewriteError`), so a repeat of the last complaint will say what is wrong.
 
-Smaller, well-defined pickups: `AGENTS.md`'s repo map does not list
-`apps/desktop/src/main/workflow.ts`; `platform-win/src/context.ts` and `desktop.ts` are still
-`notImplemented`.
+Then, in order of how much they matter:
+
+1. **Account-hopping resets the quota.** Two hours is per account, and signup is open, so a new
+   account grants another two hours. Add a device component to `public.daily_usage` and to
+   `supabase/functions/_shared/usage.ts`. Raised with the user; not built.
+2. **LLM latency through the proxy**, measured at ~700–1700 ms against ~450 ms benchmarked in S-001.
+   Start at `supabase/functions/llm/index.ts` and `packages/providers/src/llm/openrouter.ts`.
+3. `AGENTS.md:11` and `readme.md` still describe the two-person Aryan/Windows split.
 
 ## Topic → file
 
 | Topic | File |
 |---|---|
-| Soniox provider: streaming, `finalize`, `<fin>`/`<end>` markers, keepalive | 001 (S-001, S-002) |
-| Soniox regions, the India endpoint, region/key binding, measured numbers | 001 (S-004) |
-| OpenRouter provider, model benchmark, Cerebras vs Groq | 001 (S-001, S-002) |
+| Gnani provider: upgrade headers, commit-with-no-ack, framing, keyterms limits | 001 (S-009) |
+| Gnani model choice (`prisma-v3.0` vs v2.5), locale, `format=transliterate` | 001 (S-009), `docs/decisions.md` 2026-10-30 |
+| Soniox provider: streaming, `finalize`, markers, regions — **removed, history only** | 001 (S-001, S-002, S-004) |
+| Supabase backend: stt relay, llm proxy, usage, why `npm:ws` | 001 (S-010), `docs/decisions.md` 2026-10-31 |
+| Auth, sessions, `safeStorage`, token-as-a-function in the providers | 001 (S-010) |
+| Daily limit: table, RLS, counting bytes, Asia/Kolkata day | 001 (S-010) |
+| Per-account data isolation (`userData/accounts/<id>/`) | 001 (S-010) |
+| Custom hotkeys: `accepts()`, key vocabulary, the recorder | 001 (S-010) |
+| Dashboard/Insights, `shared/stats.ts`, design tokens | 001 (S-009) |
+| Windows active-app detection (`GetForegroundWindow`, image path) | 001 (S-009) |
 | Transliteration prompt, English-in-Devanagari, mishearing repair | 001 (S-005) |
-| Streaming pipeline: `open/push/finish`, why not batch, latency measurements | 001 (S-002) |
-| Windows hotkey and paste: koffi, `GetAsyncKeyState`, `SendInput`, struct sizes | 001 (S-001) |
-| Workflow engine extraction, `workflow.ts` design | 001 (S-004) |
+| Streaming pipeline: `open/push/finish`, why not batch | 001 (S-002) |
+| Windows hotkey and paste: koffi, `GetAsyncKeyState`, `SendInput` | 001 (S-001) |
+| Workflow engine, `workflow.ts` design | 001 (S-004) |
 | Settings store, frozen-defaults bug | 001 (S-003) |
-| Toolchain traps: Python interpreters, pnpm `allowBuilds`, `ELECTRON_RUN_AS_NODE`, koffi bundling | 001 (S-001) |
-| Merging with Aryan's `main`, what he added | 001 (S-004) |
-| Repo audit: real dependency list, doc accuracy, stub inventory | 001 (S-006) |
-| Repo split: what went where, the orphan commit, verification | 001 (S-008) |
+| Toolchain traps: Python, pnpm `allowBuilds`, `ELECTRON_RUN_AS_NODE`, koffi | 001 (S-001) |
+| Screenshotting and driving this app from outside — **what breaks it** | 001 (S-009) |
+| Repo audit; repo split and the orphan commit | 001 (S-006, S-008) |
 
 ## Open decisions
 
-- **Where to cut the remaining ~1 s.** Prompt length, response streaming, or a smaller model for
-  short input. Nothing chosen; no work started.
-- **Whether to pre-warm the Soniox socket** before key-down, as the earlier Python prototype did.
-  Currently it opens on key-down (~146 ms from India), hidden behind the user starting to speak.
-  Not needed at current latency.
-- ~~**`SONIOX_REGION` for the Mac side.**~~ Dropped in S-008 — this was Aryan's to confirm, and the
-  repos have split. Still true for anyone on a non-India key: the key must match `SONIOX_REGION`.
+- **Per-device quota, or leave account-hopping open?** Signup is open and the limit is per account.
+  Options: machine id alongside user id in `daily_usage`; or close signup; or accept it for the demo.
+  Raised, nothing chosen.
+- **Where to cut LLM latency**, now ~700–1700 ms through the proxy. Prompt length, response
+  streaming, a smaller model for short input, or the proxy hop itself. Nothing measured yet.
+- ~~**Whether to proxy speech-to-text.**~~ Settled in S-010: proxy if under 100 ms added; measured
+  41 ms.
+- ~~**Code signing.**~~ Settled in S-010: unsigned. A self-signed certificate does not reduce the
+  SmartScreen warning, so it buys nothing.
 
 ## Ruled out
 
+- **Soniox** — replaced by Gnani on 2026-10-30, a project requirement. 001 (S-009).
+- `WebSocketStream` in Supabase Edge Functions — not defined in that runtime at all. `npm:ws`
+  instead, which can set the upgrade headers Gnani needs. 001 (S-010).
+- Opening the relay's upstream socket beside `Deno.upgradeWebSocket`, or from a `setTimeout(…, 0)` —
+  both leave the client connection dead. Only `client.onopen` works. 001 (S-010).
+- `format=transliterate` as a replacement for the LLM pass — it paraphrases. 001 (S-009).
+- `indic-auto` as the recognition locale — guessed Telugu on a Hindi-English clip. 001 (S-009).
+- Driving this app with synthetic mouse/keyboard input — the ALT trick opens the native menu bar and
+  the next click closes the window. Restart with a different default page instead. 001 (S-009).
 - Batch speech-to-text (buffer the clip, send at release) — release→paste scaled with how long the
-  user spoke, ~5.6 s for a 6.5 s clip. 001 (S-002).
-- A low-level Windows keyboard hook (uiohook-napi) — Windows silently removes it when the callback
-  is slow and one exception kills it for the run. 001 (S-001).
-- Closing the websocket to finalise — puts the close handshake (~1.2 s to the US) on the critical
-  path. `{"type":"finalize"}` instead. 001 (S-001).
-- `llama-4-scout` for transliteration — left Devanagari untouched. `qwen3-32b` — 832 ms and wrong.
-  001 (S-001).
-- Restoring only clipboard *text* after a paste — would erase an image the user had copied. Aryan
-  replaced it with a full-format snapshot. `docs/decisions.md`, 2026-10-01.
+  user spoke. 001 (S-002).
+- A low-level Windows keyboard hook (uiohook-napi) — Windows silently removes it. 001 (S-001).
+- `llama-4-scout` and `qwen3-32b` for transliteration — wrong output. 001 (S-001).
+- Restoring only clipboard *text* after a paste. `docs/decisions.md`, 2026-10-01.
 
 ## Settled
 
-- `context/` is **committed**, not gitignored — decided 2026-10-30, S-007. The journal travels with
-  the repo, so Aryan sees it too.
+- `context/` is **committed**, not gitignored — 2026-10-30, S-007.
+- Email and password only: no OAuth, no OTP, no email confirmation; and signing up does not sign you
+  in — S-010.
+- Settings (hotkey, microphone, open-at-login) stay with the **machine**; transcripts, dictionary and
+  audio follow the **account** — S-010.
 
 ## Sessions
 
@@ -111,3 +144,5 @@ Smaller, well-defined pickups: `AGENTS.md`'s repo map does not list
 | S-006 | 2026-10-30 | Deep repo read; context system set up | 001 |
 | S-007 | 2026-10-30 | Commands moved to workspace root so they are callable | 001 |
 | S-008 | 2026-10-30 | Pushed everything to Aryan's repo, cut it loose, fresh repo | 001 |
+| S-009 | 2026-10-30 | Gnani replaces Soniox; dashboard, insights, Windows app context | 001 |
+| S-010 | 2026-10-31 | Supabase backend, accounts, 2 h/day limit, per-account data | 001 |
