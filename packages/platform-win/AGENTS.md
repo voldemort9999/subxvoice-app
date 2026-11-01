@@ -1,7 +1,9 @@
 # packages/platform-win — Windows plug
 
-Implements the `Platform` interface from `@subx/core` for Windows. Owned by the Windows teammate; the full
-setup and task list is in [`docs/WINDOWS.md`](../../docs/WINDOWS.md).
+Implements the `Platform` interface from `@subx/core` for Windows.
+
+This package is imported on macOS too, so nothing here may call a Windows API at import time —
+load `user32.dll` on first use.
 
 File names mirror `platform-mac` exactly (hotkey, inserter, permissions, context, desktop) — open the Mac
 file of the same name before writing the Windows one.

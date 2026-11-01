@@ -3,13 +3,19 @@
 Typing is optional. Hold a key, speak in any language, and clean text appears wherever your cursor is —
 on macOS and Windows.
 
-## Team
+## Where things live
 
-| Area | Owner |
+| What | Where |
 |---|---|
-| macOS | Aryan |
-| Windows | Aryan's teammate — **start with [docs/WINDOWS.md](docs/WINDOWS.md)** |
-| Core, shared UI, website, docs | Both, via pull requests |
+| This repo | the desktop app and its Supabase backend — private |
+| Installers and the update feed | [`voldemort9999/subxvoice-releases`](https://github.com/voldemort9999/subxvoice-releases) — public, because a private repo's release assets 404 for anonymous downloads |
+| The website | [`voldemort9999/subxvoice`](https://github.com/voldemort9999/subxvoice), deployed at [subxvoice.vercel.app](https://subxvoice.vercel.app) |
+
+## Releasing
+
+`pnpm --filter @subx/desktop dist:win` builds an installer and publishes nothing.
+`pnpm --filter @subx/desktop release:win` is the only command that publishes, and every installed
+copy downloads what it publishes. Bump `apps/desktop/package.json` first.
 
 ## Getting started
 
@@ -19,7 +25,6 @@ Tools (the Swift helper is built automatically).
 ```bash
 pnpm install
 pnpm dev:desktop   # Electron app
-pnpm dev:web       # website on http://localhost:3000
 pnpm check         # lint + typecheck + tests (run before every PR)
 ```
 
@@ -42,17 +47,17 @@ If the desktop app opens as plain Node inside a VS Code terminal, run `unset ELE
 | Style mode (rewrite in your tone), voice commands, MCP | ⏳ pipeline ready, no hotkey yet | ⏳ |
 | Active-app context, open apps by voice | ⏳ | ⏳ |
 | Backend: login, sync, stats, teams | ⏳ | ⏳ |
-| Installers, signing, auto-update | ⏳ config only | ⏳ config only |
-| Website with Mac / Windows download buttons | ✅ | ✅ |
+| Installers and auto-update | ⏳ builds, not released | ✅ released, updates itself |
+| Website with the download button | ✅ | ✅ |
 
-Speech-to-text and the Roman-script rewrite need API keys in development: copy `.env.example` to `.env`
-at the repo root and fill it in (see "Environment variables" in [docs/WINDOWS.md](docs/WINDOWS.md)).
-Without keys the app still records and saves audio.
+The app holds no vendor keys: speech-to-text and the Roman-script rewrite go through Supabase Edge
+Functions that a signed-in account unlocks. `.env` at the repo root is developer tuning only
+(`GNANI_MODEL`, `GNANI_LANGUAGE`, `GNANI_FORMAT`, `OPENROUTER_MODEL`) and is read in development
+only — see `.env.example`.
 
 ## Docs
 
 - [Agent guide](AGENTS.md) — repo map, rules, how-tos; also the best overview for humans
-- [Windows guide](docs/WINDOWS.md) — setup, ownership and the task list for the Windows side
 - [Features](docs/FEATURES.md) — the full product feature list
 - [Architecture](docs/architecture.md) — how the pieces fit together
 - [Tech stack](docs/TECH_STACK.md)

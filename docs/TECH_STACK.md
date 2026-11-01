@@ -2,13 +2,6 @@
 
 One language everywhere: **TypeScript** (Python only for future ML work).
 
-## Team
-| Area | Owner |
-|---|---|
-| macOS (platform-mac, Mac UI bits, mac-helper) | Aryan |
-| Windows (platform-win, Windows UI bits, win-helper) | Aryan's teammate — see [WINDOWS.md](WINDOWS.md) |
-| Core, providers, shared UI, backend, web | Both (changes via PR, reviewed by the other) |
-
 ## Desktop App
 | Part | Tech |
 |---|---|

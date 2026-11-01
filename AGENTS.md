@@ -4,12 +4,12 @@ SUBXVoice is a voice-typing desktop app for **macOS and Windows**: hold a hotkey
 switching mid-sentence is fine), and clean text is pasted at the cursor in any app. Later: voice
 commands ("write a mail"), actions via MCP, history with audio replay, stats, teams.
 
-**Start here:** [`readme.md`](readme.md) shows what works today. Working on the **Windows** side? Read
-[`docs/WINDOWS.md`](docs/WINDOWS.md) first — it has the setup, what you own and the task list.
+**Start here:** [`readme.md`](readme.md) shows what works today and how a release is cut.
 Read `docs/architecture.md` before changing anything in `packages/core`.
 
-Team: Aryan owns macOS (`platform-mac`, `native/mac-helper`); his teammate owns Windows (`platform-win`).
-Everything else is shared and changes through pull requests reviewed by the other person.
+This repo is private and holds the desktop app and its Supabase functions. The website is a
+separate repo (`voldemort9999/subxvoice`), and installers go to a public one
+(`voldemort9999/subxvoice-releases`) — see `readme.md`.
 
 ## Repo map
 
@@ -20,9 +20,7 @@ Everything else is shared and changes through pull requests reviewed by the othe
 | `packages/platform-mac` | macOS plug: hotkey, paste, permissions, context, desktop actions | Mac owner |
 | `packages/platform-win` | Windows plug — **same file names** as platform-mac | Windows owner |
 | `packages/mcp` | MCP client + server (not built yet) | both |
-| `packages/shared` | Code shared by desktop, web and (later) the backend | both |
 | `apps/desktop` | Electron app: `src/main` (Node side), `src/preload` (bridge), `src/renderer` (React UI) | both |
-| `apps/web` | Next.js website with the Mac / Windows download buttons | both |
 | `native/mac-helper` | Swift helper: fn hotkey (event tap), native mic (AVAudioEngine), permission checks | Mac owner |
 | `docs/` | Features, tech stack, architecture, decisions | both |
 
@@ -35,7 +33,6 @@ pnpm install          # once
 pnpm check            # lint + format check + typecheck + tests — run after every change
 pnpm fix              # auto-fix lint/format
 pnpm dev:desktop      # run the Electron app
-pnpm dev:web          # run the website on localhost:3000
 ```
 
 `pnpm check` must pass before you say a task is done.

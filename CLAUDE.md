@@ -19,7 +19,6 @@ pnpm install          # once
 pnpm check            # biome + typecheck + tests — must pass before you call a task done
 pnpm fix              # auto-fix lint/format
 pnpm dev:desktop      # run the Electron app
-pnpm dev:web          # website on localhost:3000
 pnpm build            # what CI runs after check
 ```
 
@@ -81,6 +80,18 @@ unit-tested without a microphone.
   native binding never unpacks and the app dies at import.
 - Live provider tests skip themselves without keys, which is how CI stays green. Absence of
   failures there does not mean the vendors were exercised.
+- **`platform-win` is imported on macOS too.** Never call a Windows API at import time — load
+  `user32.dll` on first use. A top-level `koffi.load` crashed the Mac app on startup.
+- `clipboard.ts` exists in both platform packages and the two must stay identical.
+- Electron creates `userData` **before the main script runs**, so "does the folder exist" says
+  nothing about whether the app has ever stored anything there. See `migrateUserData`.
+- electron-builder publishes drafts by default, and uploads artifacts concurrently with each
+  uploader creating the release if it finds none — so a first publish races itself into two
+  half-filled releases. `scripts/release.mjs` creates the release first; `releaseType: release`
+  stops it being a draft.
+- Faking key presses from a script is unreliable — test hotkeys by hand. To inspect the pill,
+  start with `pnpm --filter @subx/desktop exec electron-vite dev --remoteDebuggingPort 9333` and
+  open `http://127.0.0.1:9333/json`. The dashboard's DevTools are `Ctrl+Shift+I`.
 
 ## Secrets
 

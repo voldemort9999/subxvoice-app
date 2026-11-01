@@ -7,7 +7,6 @@
   },
   "scripts": {
     "dev:desktop": "pnpm --filter @subx/desktop dev",
-    "dev:web": "pnpm --filter @subx/web dev",
     "build": "turbo run build",
     "check": "biome check . && turbo run typecheck test",
     "fix": "biome check --write ."
