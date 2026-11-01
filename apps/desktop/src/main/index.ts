@@ -33,6 +33,21 @@ import { createWorkflow } from "./workflow";
 
 const HOTKEY_RETRY_MS = 3000;
 
+/**
+ * One instance, always.
+ *
+ * Without this, opening the app while it is already in the tray starts a whole second copy: two
+ * pills on screen, two tray icons, two registrations of the same hotkey — so one press dictates
+ * twice and pastes twice — and two processes writing the same history.json. It is easy to reach
+ * by accident, because the window closing to the tray looks exactly like the app having exited.
+ *
+ * Taken before anything else, so a loser never reaches migrateUserData() and races the winner
+ * over the data folder.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.exit(0);
+}
+
 /** Everything this app writes under userData. Chromium's own files are not ours to move. */
 const APP_DATA = [
   "accounts",
@@ -397,6 +412,10 @@ app.whenReady().then(() => {
   start().catch((error) => console.error("SUBXVoice failed to start:", error));
   app.on("activate", openMainWindow);
 });
+
+// Someone tried to open a second copy — almost always a double-click on the shortcut while the
+// app sat in the tray. Show them the window they were asking for.
+app.on("second-instance", () => openMainWindow());
 
 app.on("will-quit", () => {
   tray?.destroy();
