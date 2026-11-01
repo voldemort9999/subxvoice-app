@@ -2,6 +2,27 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-01 — Installers go to a separate public repo, not the source repo
+`subxvoice-app` is private, and a private repo's release assets return 404 to anonymous callers —
+the website's download button and every `electron-updater` check would both have seen a repo with
+no releases in it. The two alternatives were making the source public, or shipping a GitHub token
+inside the app so it could authenticate, which is the exact thing the Supabase work was done to
+avoid. So `voldemort9999/subxvoice-releases` exists, holds only installers and `latest.yml`, and is
+public; the source stays private. The website and `app-update.yml` both read from it, and because
+`releases/latest/download/` always resolves to the newest release, publishing a version never
+requires redeploying the site. **This repo must stay public** — making it private silently breaks
+downloads and updates together.
+
+### 2026-11-01 — Building an installer and publishing one are different commands
+`pnpm dist:win` runs `electron-builder --publish never`. `pnpm release:win` is the only path that
+publishes. The requirement was explicit: an installer built to test something must never become an
+update that installed copies download. Keeping them as one command with a flag was rejected because
+the dangerous case is the one you reach by habit. `scripts/release.mjs` reads the GitHub token from
+the credential helper git already pushes with, so no token lives in a file or in shell history, and
+it creates the release before electron-builder runs — electron-builder uploads artifacts
+concurrently and every uploader creates the release if it finds none, which on a first publish
+raced into two half-filled releases sharing one tag.
+
 ### 2026-10-31 — Both vendors move behind Supabase, because Gnani has no short-lived tokens
 Checked rather than assumed: Gnani's docs have no authentication section at all, only a long-lived
 `x-api-key-id` on the websocket upgrade, and they tell you to proxy from a backend to keep it off the

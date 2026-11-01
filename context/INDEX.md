@@ -7,75 +7,92 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-11-01 · after S-010 · branch `main` at `1a74224`, remote `voldemort9999/subxvoice-app`
+Last updated: 2026-11-01 · after S-011 · branch `main` at `04dabbc`, remote `voldemort9999/subxvoice-app`
 
 ## Where things stand
 
-SUBXVoice dictates end to end on Windows and on macOS. Hold `Ctrl+Win` (`fn` on Mac), speak
-Hindi/English/mixed, release, and Roman-script Hinglish is pasted at the cursor. The two days since
-the repo split changed three things underneath that sentence: the speech vendor, the window, and
-where the credentials live.
+SUBXVoice is **shipped**. There is a public download page, an installer anyone can take, and
+installed copies update themselves. That sentence was not true at the start of 2026-11-01.
 
-**Speech-to-text is Gnani, not Soniox** (S-009). `prisma-v3.0`, one locale `hi-IN`, over a websocket
-that opens on key-down. The swap was a project requirement rather than a measurement, and it cost
-latency: release→text went from ~52 ms to 213–478 ms. It bought something back — v3.0 writes
-Indian-accented English in Latin script rather than Devanagari, so pure-English dictation now skips
-the LLM pass entirely. Its protocol has sharp edges (config in upgrade headers, a `commit` answered
-with silence, fixed 1024-byte frames); they are written up in `CLAUDE.md` → gotchas, and ignoring
-them produces bugs that look like something else.
+The product is three repos, and confusing them is the easy mistake:
 
-**The window is a product, not a settings screen** (S-009). Dashboard, Insights, History,
-Dictionary, Settings, dark by default. Everything on Dashboard and Insights is derived from the
-history already on disk — no new tracking. Windows can now read the foreground window
-(`platform-win/src/context.ts`), so "which app did I dictate into" has real data; macOS still
-reports nothing and the chart says so rather than inventing a bar.
+| Repo | Holds | Visibility |
+|---|---|---|
+| `voldemort9999/subxvoice-app` | the desktop app and its Supabase functions — this working copy | **private** |
+| `voldemort9999/subxvoice` | the website — working copy at `pillow/subxvoice-web/` | private |
+| `voldemort9999/subxvoice-releases` | installers and `latest.yml`, nothing else | **public, must stay public** |
 
-**The app holds no vendor keys** (S-010). Gnani has no short-lived tokens — checked, not assumed:
-its docs have no authentication page at all, and Gnani's own guidance is to proxy from a backend. So
-both vendors sit behind Supabase Edge Functions that a signed-in account unlocks:
-`supabase/functions/stt` relays the dictation websocket, `supabase/functions/llm` forwards
-rewriting, `supabase/functions/usage` reports the daily allowance. Measured cost of the relay:
-+41 ms on release→text, against a 100 ms budget the user set. The app now opens on email-and-password
-sign-in, then a two-step setup (name, hotkey), and enforces two hours of dictation per account per
-day — counted from the audio the relay actually forwards, so it does not depend on the client being
-honest.
+The release repo is public because a private repo's release assets return 404 to anonymous
+callers. Making it private silently breaks the download button and every update check at the same
+time. The alternative — shipping a GitHub token inside the app — is the exact thing the S-010
+backend work was done to avoid.
 
-The hotkey accepts **any combination of two or more keys**, recorded by holding them (S-010).
-Per-account data isolation was a real hole found by the user's own final check: history, dictionary
-and recordings were machine-level, so a new account saw the previous person's transcripts. They now
-live under `userData/accounts/<user-id>/`.
+**Dictation itself is unchanged since S-010.** Hold `Ctrl+Win` (`fn` on Mac), speak Hindi/English/
+mixed, release, and Roman-script Hinglish is pasted at the cursor. Speech-to-text is Gnani
+`prisma-v3.0` over a websocket; both vendors sit behind Supabase Edge Functions that a signed-in
+account unlocks; the daily allowance is two hours per account, counted from the audio the relay
+actually forwards.
 
-What is **not** built: `apps/api` (the repo still has no backend of its own — Supabase Edge Functions
-are it), `packages/mcp`, active-app context on macOS, `openApp` on Windows, `native/win-helper`,
-SQLite (history and dictionary are JSON files), any release pipeline. The build is unsigned by
-decision.
+**What S-011 added.** `main/updater.ts` checks the public feed at launch and every six hours,
+downloads in the background and installs on quit; Settings has an Updates card so a failed check
+says why rather than going quiet. Building and publishing are deliberately different commands —
+`pnpm dist:win` passes `--publish never`, and `pnpm release:win` is the only path that publishes,
+reading its GitHub token from the credential helper git already pushes with. The whole chain was
+verified on real artifacts, not just unit tests: 0.1.0 installed, 0.1.1 published, the installed
+copy found it, downloaded 107.5 MB and upgraded itself in place.
 
-The last thing the user reported was that the hotkey and the pill "did not work". That was traced:
-the pill was fine (it was correctly placed on their second-monitor setup), and the real fault was a
-`catch { return text }` in `pipeline.ts` that hid every rewrite failure, plus being signed out. Both
-are fixed. **They have not retested since.**
+Two product flaws surfaced while testing and were fixed before launch: the app installed itself as
+`@subxdesktop` and kept user data under `AppData\Roaming\@subx\desktop` (no `productName` in
+package.json), and the installer shipped the default Electron icon. The rename moves `userData`, so
+`migrateUserData()` carries an upgrading install's data across — and its first version never ran,
+because Electron creates `userData` before the main script does.
+
+**The website** is the Lovable template, rebranded onto the app's exact design tokens and rewritten
+to be true: the fake early-access email form is gone, the CTA is the installer, the FAQ answers from
+shipped behaviour, and Privacy and Terms are real pages rather than "coming before launch" stubs.
+Live at **subxvoice.vercel.app**.
+
+**Repo hygiene.** `apps/web` and `packages/shared` were deleted — the placeholder site and the only
+thing that imported it. They held a second definition of the download URL that nothing rendered.
+`docs/WINDOWS.md` was deleted too: it told the reader to fork `aryan-2255/subxvoice` and open PRs
+against it, and its API-keys section still described a world before S-010. Its three real facts
+moved into `CLAUDE.md`.
+
+Live version is **0.1.2**. What is still **not** built: `packages/mcp`, active-app context on macOS,
+`openApp` on Windows, `native/win-helper`, SQLite, a macOS release. The build is unsigned by
+decision, so Windows shows a SmartScreen warning on first install; the website says so plainly.
 
 ## Continue from here
 
-Nothing is mid-flight; the working tree is clean and `main` is pushed.
+Nothing is mid-flight. Both repos are clean and pushed; `pnpm check` is 10/10.
 
-First thing: **have the user retest a dictation end to end** — sign in, complete setup, hold the
-hotkey. Every failure path now reports itself (an amber dot on the pill, "went in as heard" in
-History, `SessionRecord.rewriteError`), so a repeat of the last complaint will say what is wrong.
+First thing, and it is now two sessions overdue: **have the user run a real dictation end to end** —
+sign in, complete setup, hold the hotkey. Every fix since S-010 (the blank `OPENROUTER_MODEL`, the
+silent rewrite failure, per-account data) is still unconfirmed by an actual dictation. Every failure
+path reports itself now: an amber dot on the pill, "went in as heard" in History, and
+`SessionRecord.rewriteError`.
 
 Then, in order of how much they matter:
 
-1. **Account-hopping resets the quota.** Two hours is per account, and signup is open, so a new
-   account grants another two hours. Add a device component to `public.daily_usage` and to
-   `supabase/functions/_shared/usage.ts`. Raised with the user; not built.
-2. **LLM latency through the proxy**, measured at ~700–1700 ms against ~450 ms benchmarked in S-001.
-   Start at `supabase/functions/llm/index.ts` and `packages/providers/src/llm/openrouter.ts`.
-3. `AGENTS.md:11` and `readme.md` still describe the two-person Aryan/Windows split.
+1. **Account-hopping resets the quota.** Two hours is per account, signup is open, so a new account
+   grants another two hours. Add a device component to `public.daily_usage` and to
+   `supabase/functions/_shared/usage.ts`. Raised twice with the user; still not built.
+2. **LLM latency through the proxy**, ~700–1700 ms against ~450 ms benchmarked in S-001. Start at
+   `supabase/functions/llm/index.ts` and `packages/providers/src/llm/openrouter.ts`.
+3. The website has no support address — Contact points at the releases repo's issues.
+4. macOS has a `release:mac` script that has never been run.
 
 ## Topic → file
 
 | Topic | File |
 |---|---|
+| Auto-update: `updater.ts`, the six states, install-on-quit | 001 (S-011) |
+| Release pipeline: `dist` vs `release`, draft/race traps, token from git credentials | 001 (S-011), `docs/decisions.md` 2026-11-01 |
+| Why installers live in a separate **public** repo | 001 (S-011), `docs/decisions.md` 2026-11-01 |
+| `productName`, install directory, `userData` rename and `migrateUserData` | 001 (S-011) |
+| Generated icon: `shared/mark.ts`, `build-icon.mjs`, zlib PNG | 001 (S-011) |
+| The website: rebrand, download link, Vercel, nitro preset | 001 (S-011) |
+| Why `apps/web`, `packages/shared` and `docs/WINDOWS.md` were deleted | 001 (S-011) |
 | Gnani provider: upgrade headers, commit-with-no-ack, framing, keyterms limits | 001 (S-009) |
 | Gnani model choice (`prisma-v3.0` vs v2.5), locale, `format=transliterate` | 001 (S-009), `docs/decisions.md` 2026-10-30 |
 | Soniox provider: streaming, `finalize`, markers, regions — **removed, history only** | 001 (S-001, S-002, S-004) |
@@ -91,24 +108,33 @@ Then, in order of how much they matter:
 | Windows hotkey and paste: koffi, `GetAsyncKeyState`, `SendInput` | 001 (S-001) |
 | Workflow engine, `workflow.ts` design | 001 (S-004) |
 | Settings store, frozen-defaults bug | 001 (S-003) |
-| Toolchain traps: Python, pnpm `allowBuilds`, `ELECTRON_RUN_AS_NODE`, koffi | 001 (S-001) |
+| Toolchain traps: Python, pnpm `allowBuilds`, `ELECTRON_RUN_AS_NODE`, koffi | 001 (S-001, S-011) |
 | Screenshotting and driving this app from outside — **what breaks it** | 001 (S-009) |
 | Repo audit; repo split and the orphan commit | 001 (S-006, S-008) |
 
 ## Open decisions
 
 - **Per-device quota, or leave account-hopping open?** Signup is open and the limit is per account.
-  Options: machine id alongside user id in `daily_usage`; or close signup; or accept it for the demo.
-  Raised, nothing chosen.
-- **Where to cut LLM latency**, now ~700–1700 ms through the proxy. Prompt length, response
-  streaming, a smaller model for short input, or the proxy hop itself. Nothing measured yet.
-- ~~**Whether to proxy speech-to-text.**~~ Settled in S-010: proxy if under 100 ms added; measured
-  41 ms.
+  Options: machine id alongside user id in `daily_usage`; or close signup; or accept it. Raised in
+  S-010 and again in S-011; nothing chosen.
+- **Where to cut LLM latency**, ~700–1700 ms through the proxy. Prompt length, response streaming, a
+  smaller model for short input, or the proxy hop itself. Nothing measured yet.
+- **A support address for the website.** Contact currently points at the releases repo's issues.
+- ~~**Where installers are hosted.**~~ Settled in S-011: GitHub Releases on a separate public repo.
+- ~~**Whether the website joins the monorepo.**~~ Settled in S-011: it stays its own repo.
+- ~~**Whether to proxy speech-to-text.**~~ Settled in S-010: proxy if under 100 ms; measured 41 ms.
 - ~~**Code signing.**~~ Settled in S-010: unsigned. A self-signed certificate does not reduce the
-  SmartScreen warning, so it buys nothing.
+  SmartScreen warning, so it buys nothing. Confirmed in S-011 that unsigned builds auto-update fine.
 
 ## Ruled out
 
+- **Supabase Storage for installers** — free tier caps egress at 5 GB/month, about 35–45 downloads
+  of a ~110 MB installer. 001 (S-011).
+- **Making `subxvoice-app` public**, and **shipping a GitHub token in the app**, as ways to serve
+  releases from a private repo. 001 (S-011).
+- **Publishing from CI on a tag** — the user wanted a command they run. 001 (S-011).
+- **electron-builder's default publish behaviour** — `draft` releases 404 for anonymous callers, and
+  concurrent uploaders race into two half-filled releases. 001 (S-011).
 - **Soniox** — replaced by Gnani on 2026-10-30, a project requirement. 001 (S-009).
 - `WebSocketStream` in Supabase Edge Functions — not defined in that runtime at all. `npm:ws`
   instead, which can set the upgrade headers Gnani needs. 001 (S-010).
@@ -131,6 +157,7 @@ Then, in order of how much they matter:
   in — S-010.
 - Settings (hotkey, microphone, open-at-login) stay with the **machine**; transcripts, dictionary and
   audio follow the **account** — S-010.
+- `pnpm dist:*` never publishes; `pnpm release:*` is the only thing that does — S-011.
 
 ## Sessions
 
@@ -146,3 +173,4 @@ Then, in order of how much they matter:
 | S-008 | 2026-10-30 | Pushed everything to Aryan's repo, cut it loose, fresh repo | 001 |
 | S-009 | 2026-10-30 | Gnani replaces Soniox; dashboard, insights, Windows app context | 001 |
 | S-010 | 2026-10-31 | Supabase backend, accounts, 2 h/day limit, per-account data | 001 |
+| S-011 | 2026-11-01 | Auto-update, public release repo, website live on Vercel | 001 |
