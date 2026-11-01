@@ -33,26 +33,42 @@ import { createWorkflow } from "./workflow";
 
 const HOTKEY_RETRY_MS = 3000;
 
+/** Everything this app writes under userData. Chromium's own files are not ours to move. */
+const APP_DATA = [
+  "accounts",
+  "recordings",
+  "settings.json",
+  "history.json",
+  "dictionary.json",
+  "session.bin",
+];
+
 /**
- * Settings, history, the dictionary and every recording live under `userData`, whose default is
- * named after the app. That name was the package name until 0.1.1 — `@subx/desktop`, which
- * Windows showed as `AppData\Roaming\@subx\desktop` and installed into `Programs\@subxdesktop`.
- * Naming the product fixed both, and moves the folder, so an upgrading install is carried over
- * rather than waking up with no history and signed out.
+ * Carries a 0.1.0 install's data to the renamed userData folder.
  *
- * Runs before anything reads a path, and only when there is nothing at the new location.
+ * package.json had no productName until 0.1.1, so both Windows-facing names fell back to the
+ * package name: the app installed into `Programs\@subxdesktop` and kept everything under
+ * `AppData\Roaming\@subx\desktop`. Naming the product moved userData, which would otherwise
+ * leave an upgrading install empty and signed out.
+ *
+ * Electron creates userData before this file runs, so the folder already existing says nothing —
+ * each entry is moved only when it is genuinely missing at the new location.
  */
 function migrateUserData(): void {
   const previous = join(app.getPath("appData"), "@subx", "desktop");
+  if (!existsSync(previous)) return;
   const current = app.getPath("userData");
-  if (existsSync(current) || !existsSync(previous)) return;
-  try {
-    renameSync(previous, current);
-    console.log("Moved your data from the old @subx folder.");
-  } catch (error) {
-    // Not fatal: the app still starts, just empty. Losing the old folder is better than refusing
-    // to open, and the data is still on disk where the user can reach it.
-    console.error("Could not move the old data folder:", error);
+  for (const name of APP_DATA) {
+    const from = join(previous, name);
+    const to = join(current, name);
+    if (!existsSync(from) || existsSync(to)) continue;
+    try {
+      renameSync(from, to);
+    } catch (error) {
+      // Not fatal: the app still opens, just without that piece. Refusing to start would be
+      // worse, and nothing has been deleted — the old folder is still there to recover from.
+      console.error(`Could not move ${name} from the old data folder:`, error);
+    }
   }
 }
 migrateUserData();
