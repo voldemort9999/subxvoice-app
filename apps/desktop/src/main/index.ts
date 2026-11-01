@@ -45,6 +45,9 @@ const HOTKEY_RETRY_MS = 3000;
  * over the data folder.
  */
 if (!app.requestSingleInstanceLock()) {
+  // Said out loud: in development this is reached by running `pnpm dev:desktop` while the
+  // installed app sits in the tray, and a window that opens and vanishes explains nothing.
+  console.log("SUBXVoice is already running; raising that window instead.");
   app.exit(0);
 }
 

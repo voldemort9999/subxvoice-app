@@ -89,6 +89,10 @@ unit-tested without a microphone.
   uploader creating the release if it finds none — so a first publish races itself into two
   half-filled releases. `scripts/release.mjs` creates the release first; `releaseType: release`
   stops it being a draft.
+- **`pnpm dev:desktop` and the installed app are the same app to Windows.** They share
+  `userData`, so both write the same `history.json`, and they now compete for the single-instance
+  lock — whichever starts second exits. Two pills on screen at once means two copies are running,
+  and the dev one is `electron.exe`, so looking for `SUBXVoice.exe` will not find it.
 - Faking key presses from a script is unreliable — test hotkeys by hand. To inspect the pill,
   start with `pnpm --filter @subx/desktop exec electron-vite dev --remoteDebuggingPort 9333` and
   open `http://127.0.0.1:9333/json`. The dashboard's DevTools are `Ctrl+Shift+I`.
