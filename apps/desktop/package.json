@@ -9,9 +9,12 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "dist:mac": "node scripts/build-mac-helper.mjs --universal && electron-vite build && electron-builder --mac",
-    "dist:win": "electron-vite build && electron-builder --win",
-    "test": "vitest run"
+    "dist:mac": "node scripts/build-mac-helper.mjs --universal && node scripts/build-icon.mjs && electron-vite build && electron-builder --mac --publish never",
+    "dist:win": "node scripts/build-icon.mjs && electron-vite build && electron-builder --win --publish never",
+    "test": "vitest run",
+    "release:mac": "node scripts/build-mac-helper.mjs --universal && node scripts/release.mjs --mac",
+    "release:win": "node scripts/release.mjs --win",
+    "build:icon": "node scripts/build-icon.mjs"
   },
   "devDependencies": {
     "@subx/core": "workspace:*",
@@ -25,6 +28,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.11",
     "electron-vite": "^5.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",

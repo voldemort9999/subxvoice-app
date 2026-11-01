@@ -267,7 +267,9 @@ export function Toggle({
       }`}
     >
       <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+        /* left-0 is load-bearing: a button centres its content, so without it the knob's
+           static position is mid-track and translate-x pushes it out the right-hand end. */
+        className={`absolute top-0.5 left-0 h-4 w-4 rounded-full bg-white transition-transform ${
           checked ? "translate-x-[18px]" : "translate-x-0.5"
         }`}
       />

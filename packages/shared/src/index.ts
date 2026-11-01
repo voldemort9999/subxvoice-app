@@ -1,6 +1,11 @@
 // Shared between the desktop app, the website and (later) the backend.
 
-export const GITHUB_REPO = "aryan-2255/subxvoice";
+/**
+ * Installers only. The source repo is private, and a private repo's release assets 404 for
+ * anonymous downloads — so both the download button and the updater read from this public one.
+ * Must match `publish` in apps/desktop/electron-builder.yml.
+ */
+export const GITHUB_REPO = "voldemort9999/subxvoice-releases";
 
 /** Must match `artifactName` in apps/desktop/electron-builder.yml. */
 export const DOWNLOAD_FILES = {

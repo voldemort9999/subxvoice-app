@@ -6,6 +6,7 @@ import type {
   AppSettings,
   MicrophoneOption,
   PermissionStatus,
+  UpdateState,
   Usage,
 } from "../../../shared/ipc";
 
@@ -46,6 +47,16 @@ export function usePermissions(): PermissionStatus[] | null {
 }
 
 /** User settings, kept in sync with every window. `null` while loading. */
+/** Update progress, pushed from the main process as the download runs. */
+export function useUpdate(): UpdateState | null {
+  const [state, setState] = useState<UpdateState | null>(null);
+  useEffect(() => {
+    void window.subx.update.state().then(setState);
+    return window.subx.update.onChanged(setState);
+  }, []);
+  return state;
+}
+
 export function useSettings(): [AppSettings | null, (patch: Partial<AppSettings>) => void] {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   useEffect(() => {

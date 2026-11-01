@@ -1,8 +1,8 @@
 import { HotkeyNote, MicrophoneNote, PermissionsIntro } from "@platform/Chrome";
-import type { AppInfo } from "../../../shared/ipc";
+import type { AppInfo, UpdateState } from "../../../shared/ipc";
 import { hotkeyLabel } from "../shared/format";
 import { HotkeyRecorder } from "../shared/HotkeyRecorder";
-import { useAccount, useMicrophones, useSettings } from "../shared/hooks";
+import { useAccount, useMicrophones, useSettings, useUpdate } from "../shared/hooks";
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
 import { Button, Card, Field, Select, Toggle } from "../shared/ui";
@@ -24,6 +24,7 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
   const [settings, update] = useSettings();
   const microphones = useMicrophones();
   const account = useAccount();
+  const update$ = useUpdate();
   const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "";
 
   return (
@@ -141,9 +142,66 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
         </div>
       </Card>
 
-      <p className="figure-num px-1 text-xs text-faint">SUBXVoice {info?.version ?? ""}</p>
+      <Card title="Updates">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="figure-num font-medium">SUBXVoice {info?.version ?? ""}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              <UpdateLine state={update$} />
+            </p>
+          </div>
+          <UpdateAction state={update$} />
+        </div>
+      </Card>
     </div>
   );
+}
+
+/** Says what the updater is doing, in the one line someone glances at to answer "am I current?". */
+function UpdateLine({ state }: { state: UpdateState | null }) {
+  if (!state) return <>Checking…</>;
+  switch (state.kind) {
+    case "checking":
+      return <>Checking for updates…</>;
+    case "current":
+      return <>Up to date, checked {timeAgo(state.checkedAt)}.</>;
+    case "downloading":
+      return (
+        <>
+          Downloading {state.version} — {state.percent}%
+        </>
+      );
+    case "ready":
+      return <>Version {state.version} is ready. It installs when you quit, or restart now.</>;
+    case "error":
+      // The reason is shown rather than swallowed: a silent updater is one nobody can debug.
+      return <span className="text-warn">Could not check for updates — {state.message}</span>;
+    case "unsupported":
+      return <>{state.reason}</>;
+    default:
+      return <>Updates are installed automatically.</>;
+  }
+}
+
+function UpdateAction({ state }: { state: UpdateState | null }) {
+  if (state?.kind === "ready") {
+    return <Button onClick={() => window.subx.update.install()}>Restart and install</Button>;
+  }
+  const busy = state?.kind === "checking" || state?.kind === "downloading";
+  if (state?.kind === "unsupported") return null;
+  return (
+    <Button disabled={busy} onClick={() => void window.subx.update.check()}>
+      {busy ? "Checking…" : "Check for updates"}
+    </Button>
+  );
+}
+
+function timeAgo(at: number): string {
+  const minutes = Math.round((Date.now() - at) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
 }
 
 function EngineStatus({ ready, name }: { ready: boolean | undefined; name: string }) {

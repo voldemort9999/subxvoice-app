@@ -27,6 +27,7 @@ import { deleteRecording, recordingsDir, saveRecording, setRecordingsDir } from 
 import { loadPage, PRELOAD_PATH } from "./renderer";
 import { JsonDictionaryStore, JsonHistoryStore, JsonSettingsStore } from "./stores";
 import { createTray } from "./tray";
+import { checkForUpdate, installUpdate, startUpdater, updateState } from "./updater";
 import { createWorkflow } from "./workflow";
 
 const HOTKEY_RETRY_MS = 3000;
@@ -287,6 +288,15 @@ async function start(): Promise<void> {
     await registerHotkey();
     return next;
   });
+  ipcMain.handle(IPC.updateState, () => updateState());
+  ipcMain.handle(IPC.updateCheck, () => checkForUpdate());
+  ipcMain.on(IPC.updateInstall, () => installUpdate());
+  startUpdater((state) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send(IPC.updateChanged, state);
+    }
+  }, app.isPackaged);
+
   ipcMain.handle(IPC.microphoneList, () => microphones);
   ipcMain.on(IPC.microphonePublish, (_event, options: unknown) => {
     microphones = Array.isArray(options)

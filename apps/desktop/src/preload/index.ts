@@ -22,6 +22,12 @@ const api: SubxApi = {
     info: () => ipcRenderer.invoke(IPC.appInfo),
     openRecordingsFolder: () => ipcRenderer.invoke(IPC.openRecordingsFolder),
   },
+  update: {
+    state: () => ipcRenderer.invoke(IPC.updateState),
+    check: () => ipcRenderer.invoke(IPC.updateCheck),
+    install: () => ipcRenderer.send(IPC.updateInstall),
+    onChanged: (listener) => subscribe(IPC.updateChanged, listener),
+  },
   permissions: {
     list: () => ipcRenderer.invoke(IPC.permissionList),
     request: (kind) => ipcRenderer.invoke(IPC.permissionRequest, kind),

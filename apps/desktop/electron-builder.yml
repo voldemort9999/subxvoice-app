@@ -40,7 +40,10 @@ nsis:
   oneClick: true
   perMachine: false
 
+# Installers are published to a separate PUBLIC repo so the source can stay private: a private
+# repo's release assets 404 for anonymous downloads, which would break both the website's download
+# button and every auto-update check.
 publish:
   provider: github
-  owner: aryan-2255
-  repo: subxvoice
+  owner: voldemort9999
+  repo: subxvoice-releases

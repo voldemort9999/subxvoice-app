@@ -34,6 +34,10 @@ export const IPC = {
   settingsChanged: "settings:changed",
   microphoneList: "settings:microphones",
   microphonePublish: "settings:microphones-publish",
+  updateState: "update:state",
+  updateCheck: "update:check",
+  updateInstall: "update:install",
+  updateChanged: "update:changed",
   // main → pill
   pillState: "pill:state",
   pillLevel: "pill:level",
@@ -113,6 +117,19 @@ export type PillState =
 
 export type MicCommand = "start" | "stop";
 
+/**
+ * Where the app is in the update cycle. `unsupported` covers development, where there is no
+ * installer to replace; it is a state rather than a silence so the UI can say why.
+ */
+export type UpdateState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "current"; checkedAt: number }
+  | { kind: "downloading"; version: string; percent: number }
+  | { kind: "ready"; version: string }
+  | { kind: "error"; message: string }
+  | { kind: "unsupported"; reason: string };
+
 /** Exposed to the UI as `window.subx` by the preload script. */
 export interface SubxApi {
   os: "mac" | "win";
@@ -128,6 +145,14 @@ export interface SubxApi {
   app: {
     info(): Promise<AppInfo>;
     openRecordingsFolder(): Promise<void>;
+  };
+  update: {
+    state(): Promise<UpdateState>;
+    /** Checks now. Resolves with the state once the check has settled. */
+    check(): Promise<UpdateState>;
+    /** Quits and installs. Only does anything once the state is `ready`. */
+    install(): void;
+    onChanged(listener: (state: UpdateState) => void): () => void;
   };
   permissions: {
     list(): Promise<PermissionStatus[]>;

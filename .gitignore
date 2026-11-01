@@ -17,3 +17,6 @@ native/mac-helper/build/
 
 # Supabase CLI scratch state, not project configuration.
 supabase/.temp/
+
+# Generated from src/shared/mark.ts by scripts/build-icon.mjs.
+apps/desktop/build/icon.png
