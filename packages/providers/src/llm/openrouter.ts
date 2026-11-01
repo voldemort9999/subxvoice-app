@@ -51,7 +51,8 @@ export class OpenRouterLlm implements LlmProvider {
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       body: JSON.stringify({
-        model: this.options.model ?? DEFAULT_MODEL,
+        // `||`, not `??`: an empty model name is not a choice, and OpenRouter rejects it.
+        model: this.options.model?.trim() || DEFAULT_MODEL,
         messages: [
           { role: "system", content: request.system },
           ...request.messages.map((message) => ({ role: message.role, content: message.content })),

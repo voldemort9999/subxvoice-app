@@ -211,7 +211,8 @@ class GnaniStream implements SttStream {
         language_code: options.languageHint
           ? toLocale(options.languageHint)
           : (connection.language ?? DEFAULT_LANGUAGE),
-        model: connection.model ?? DEFAULT_MODEL,
+        // `||`, not `??`: an empty model name is not a choice.
+        model: connection.model?.trim() || DEFAULT_MODEL,
         ...(connection.format ? { format: connection.format } : {}),
         ...(keyterms.length > 0 ? { keyterms: keyterms.join(",") } : {}),
       },

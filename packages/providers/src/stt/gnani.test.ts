@@ -137,6 +137,19 @@ describe("GnaniStt session setup", () => {
     await expect(stt.startStream({ vocabulary: [] }, 22050)).rejects.toThrow(/22050 Hz/);
   });
 
+  it("falls back to the default model when the setting is blank", async () => {
+    // .env.example ships GNANI_MODEL= with no value, and "" is not a model name.
+    install();
+    const stt = new GnaniStt({ token: "vach_test", model: "  " });
+    const streaming = stt.startStream({ vocabulary: [] }, 16000);
+    await tick();
+    const socket = FakeSocket.last as FakeSocket;
+    socket.deliver({ type: "connected", config: {} });
+    await streaming;
+
+    expect(socket.init.headers.model).toBe("prisma-v3.0");
+  });
+
   it("needs a token", () => {
     expect(() => new GnaniStt({ token: "" })).toThrow(/token/);
   });

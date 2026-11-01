@@ -35,6 +35,13 @@ export function loadDevEnv(): void {
   }
 }
 
+/**
+ * A setting from .env, or undefined when it is blank. `.env.example` ships every optional key with
+ * an empty value, so "present but empty" means "not set" — and passing "" through as a model name
+ * is worse than passing nothing: OpenRouter answers `400 No models provided`.
+ */
+const fromEnv = (name: string): string | undefined => process.env[name]?.trim() || undefined;
+
 export function createEngines(account: Account): Engines {
   const problems: string[] = [];
   let stt: SttProvider | undefined;
@@ -45,11 +52,11 @@ export function createEngines(account: Account): Engines {
 
   // These are developer settings from .env, so a typo is reported rather than silently sent to
   // the service — which would reject the whole session over one bad header.
-  const languageEnv = process.env.GNANI_LANGUAGE?.trim();
+  const languageEnv = fromEnv("GNANI_LANGUAGE");
   if (languageEnv && !isGnaniLanguage(languageEnv)) {
     problems.push(`Ignoring GNANI_LANGUAGE="${languageEnv}": expected a locale such as hi-IN or en-IN.`);
   }
-  const formatEnv = process.env.GNANI_FORMAT?.trim();
+  const formatEnv = fromEnv("GNANI_FORMAT");
   if (formatEnv && !isGnaniFormat(formatEnv)) {
     problems.push(
       `Ignoring GNANI_FORMAT="${formatEnv}": expected verbatim, transcribe, codemix or transliterate.`,
@@ -62,7 +69,7 @@ export function createEngines(account: Account): Engines {
       token,
       viaBackend: true,
       baseUrl: STT_URL,
-      model: process.env.GNANI_MODEL,
+      model: fromEnv("GNANI_MODEL"),
       language: languageEnv && isGnaniLanguage(languageEnv) ? languageEnv : undefined,
       format: formatEnv && isGnaniFormat(formatEnv) ? formatEnv : undefined,
     });
@@ -75,7 +82,7 @@ export function createEngines(account: Account): Engines {
       id: "openrouter",
       token,
       baseUrl: LLM_URL,
-      model: process.env.OPENROUTER_MODEL,
+      model: fromEnv("OPENROUTER_MODEL"),
       // Cerebras is fastest + most consistent on Hindi-English; groq as fallback.
       order: ["cerebras", "groq"],
     });
