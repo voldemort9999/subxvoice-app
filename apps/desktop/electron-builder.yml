@@ -47,3 +47,6 @@ publish:
   provider: github
   owner: voldemort9999
   repo: subxvoice-releases
+  # Default is `draft`, and a draft's assets 404 for everyone — the download link and the
+  # updater would both see a repo with no releases in it.
+  releaseType: release

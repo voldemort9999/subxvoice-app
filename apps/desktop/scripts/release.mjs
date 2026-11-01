@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const REPO = "voldemort9999/subxvoice-releases";
 
 const target = process.argv[2];
 if (target !== "--win" && target !== "--mac") {
@@ -35,12 +36,55 @@ function githubToken() {
   return token;
 }
 
+const token = githubToken();
+
+async function github(method, path, body) {
+  const response = await fetch(`https://api.github.com/repos/${REPO}${path}`, {
+    method,
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "content-type": "application/json",
+    },
+    body: body && JSON.stringify(body),
+  });
+  return { status: response.status, body: await response.json().catch(() => ({})) };
+}
+
+/**
+ * Creates the release before electron-builder runs.
+ *
+ * electron-builder uploads each artifact concurrently, and every uploader creates the release if
+ * it finds none — so on a first publish two of them race and the assets land in two separate
+ * releases sharing one tag, neither of them complete. An already-present release is just reused.
+ */
+async function ensureRelease() {
+  const tag = `v${version}`;
+  const found = await github("GET", `/releases/tags/${tag}`);
+  if (found.status === 200) {
+    if (found.body.draft) await github("PATCH", `/releases/${found.body.id}`, { draft: false });
+    console.log(`Reusing the existing ${tag} release.`);
+    return;
+  }
+  const created = await github("POST", "/releases", {
+    tag_name: tag,
+    name: `SUBXVoice ${version}`,
+    draft: false,
+    prerelease: false,
+  });
+  if (created.status !== 201) {
+    console.error(`Could not create the ${tag} release:`, created.status, created.body.message);
+    process.exit(1);
+  }
+  console.log(`Created the ${tag} release.`);
+}
+
 const run = (command, args) => {
   const result = spawnSync(command, args, {
     cwd: root,
     stdio: "inherit",
     shell: process.platform === "win32",
-    env: { ...process.env, GH_TOKEN: githubToken() },
+    env: { ...process.env, GH_TOKEN: token },
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
@@ -48,9 +92,10 @@ const run = (command, args) => {
 console.log(`\nPublishing SUBXVoice ${version} to the releases repo.`);
 console.log("Every installed copy will download this. Ctrl+C now if that is not what you meant.\n");
 
+await ensureRelease();
 run("node", ["scripts/build-icon.mjs"]);
 run("npx", ["electron-vite", "build"]);
 run("npx", ["electron-builder", target, "--publish", "always"]);
 
 console.log(`\nDone. SUBXVoice ${version} is live.`);
-console.log("https://github.com/voldemort9999/subxvoice-releases/releases/latest");
+console.log(`https://github.com/${REPO}/releases/latest`);
