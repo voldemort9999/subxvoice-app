@@ -83,8 +83,12 @@ export function createEngines(account: Account): Engines {
       token,
       baseUrl: LLM_URL,
       model: fromEnv("OPENROUTER_MODEL"),
-      // Cerebras is fastest + most consistent on Hindi-English; groq as fallback.
-      order: ["cerebras", "groq"],
+      // Groq first: measured on a 693-character Hindi-English dictation it is both correct and
+      // the fastest of the lot (~750 ms, against Cerebras' ~2 s). Cerebras is excluded rather
+      // than merely deprioritised — it silently returns long input unconverted, and a fallback
+      // that corrupts the result is worse than one that is slow.
+      order: ["groq"],
+      ignore: ["cerebras"],
     });
   } catch (error) {
     problems.push(describe("Rewriting", error));

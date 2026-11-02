@@ -20,6 +20,8 @@ export interface ProviderConfig {
   only?: string[];
   /** Preferred upstream providers in order, with fallback (OpenRouter). */
   order?: string[];
+  /** Upstream providers that must never serve the request (OpenRouter). */
+  ignore?: string[];
 }
 
 // To add a vendor: create stt/<vendor>.ts (or llm/<vendor>.ts) implementing the
@@ -52,6 +54,7 @@ export function createLlm(config: ProviderConfig): LlmProvider {
         baseUrl: config.baseUrl,
         only: config.only,
         order: config.order,
+        ignore: config.ignore,
       });
     case "fake":
       return new FakeLlm("Hello from the fake LLM provider.");

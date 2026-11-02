@@ -5,8 +5,10 @@ import { resolveToken, type TokenSource } from "../stt/gnani";
 const DEFAULT_URL = "https://openrouter.ai/api/v1/chat/completions";
 /**
  * Benchmarked against gpt-oss-20b, llama-4-scout, llama-3.3-70b and qwen3-32b on Hindi-English
- * samples: this was both the fastest (~280 ms warm on Groq) and the only one that never left
- * Devanagari untouched. Groq rejects gpt-oss with reasoning disabled, so "low" is the floor.
+ * samples: this was both the fastest and the only one that never left Devanagari untouched. Groq
+ * rejects gpt-oss with reasoning disabled, so "low" is the floor.
+ *
+ * Which upstream serves it matters as much as the model — see `ignore` below.
  */
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const DEFAULT_MAX_TOKENS = 1200;
@@ -19,12 +21,17 @@ export interface OpenRouterOptions {
   baseUrl?: string;
   /** Restrict routing to only these upstream providers. */
   only?: string[];
-  /**
-   * Preferred upstream providers, tried in order, with fallback to the rest. Benchmarked on
-   * Hindi-English: cerebras is fastest and most consistent (~450 ms), groq a close second — so
-   * cerebras first, groq as backup.
-   */
+  /** Preferred upstream providers, tried in order, with fallback to the rest. */
   order?: string[];
+  /**
+   * Upstream providers that must never serve this request, whatever `order` falls back to.
+   *
+   * The same model behaves differently depending on who runs it: Cerebras-served gpt-oss-120b
+   * stops following the system prompt once the input gets long, and hands back the Devanagari it
+   * was asked to convert. Measured on a 693-character dictation, 7 attempts, 7 failures — while
+   * the same request succeeded on Groq, CoreWeave, BaseTen and Near AI every time.
+   */
+  ignore?: string[];
 }
 
 interface ChatResponse {
@@ -43,6 +50,12 @@ export class OpenRouterLlm implements LlmProvider {
   }
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
+    const { only, order, ignore } = this.options;
+    const provider = {
+      ...(order?.length ? { order } : {}),
+      ...(only?.length ? { only } : {}),
+      ...(ignore?.length ? { ignore } : {}),
+    };
     const response = await fetch(this.options.baseUrl ?? DEFAULT_URL, {
       method: "POST",
       headers: {
@@ -60,11 +73,8 @@ export class OpenRouterLlm implements LlmProvider {
         temperature: 0,
         max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
         reasoning: { effort: "low" },
-        ...(this.options.order
-          ? { provider: { order: this.options.order } }
-          : this.options.only
-            ? { provider: { only: this.options.only } }
-            : {}),
+        // An empty object is still a routing preference to OpenRouter, so send nothing.
+        ...(Object.keys(provider).length ? { provider } : {}),
       }),
     });
 

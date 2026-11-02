@@ -63,7 +63,9 @@ export class DictationController {
     this.chunks = [];
     this.pending = [];
     this.run = null;
-    this.pill.moveToCursorScreen();
+    // Not just repositioned: every dictation is a chance to notice the pill has died and
+    // bring it back, which is the moment the user would otherwise find it missing.
+    this.pill.revive();
     this.pill.setState({ kind: "listening" });
 
     // Open the STT stream and the mic together, so neither waits on the other. Chunks that arrive

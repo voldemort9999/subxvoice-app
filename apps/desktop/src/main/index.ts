@@ -32,6 +32,8 @@ import { checkForUpdate, installUpdate, startUpdater, updateState } from "./upda
 import { createWorkflow } from "./workflow";
 
 const HOTKEY_RETRY_MS = 3000;
+/** A renderer killed for memory dies again if reloaded straight away. */
+const RENDERER_RELOAD_MS = 500;
 
 /**
  * One instance, always.
@@ -99,14 +101,23 @@ let engines: ReturnType<typeof createEngines> = { problems: [] };
 /** Reported by the renderer, which is the only side with MediaDevices. */
 let microphones: MicrophoneOption[] = [];
 let mainWindow: BrowserWindow | null = null;
+/** Held at module scope so opening the app can revive it; built in start(). */
+let pillWindow: PillWindow | null = null;
 let tray: Tray | null = null; // kept in a variable so it isn't garbage-collected
 
 /** True when Windows launched us at login (see the login item's args). */
 const startedHidden = () => process.argv.includes("--hidden") || app.getLoginItemSettings().wasOpenedAtLogin;
 
 function openMainWindow(): void {
+  // Opening the app is what someone does when the pill has vanished, so it is the natural place
+  // to put it back — it used to touch only the main window, which is why force-quitting was the
+  // only thing that worked.
+  pillWindow?.revive();
   if (process.platform === "darwin") app.focus({ steal: true });
   if (mainWindow) {
+    // A dead renderer leaves the window as a blank white rectangle, and showing it again shows
+    // the same blank rectangle. Reload first, so opening the app is a real recovery.
+    if (mainWindow.webContents.isCrashed()) mainWindow.webContents.reload();
     mainWindow.show();
     mainWindow.focus();
     return;
@@ -123,6 +134,14 @@ function openMainWindow(): void {
     webPreferences: { preload: PRELOAD_PATH, sandbox: true, contextIsolation: true },
   });
   mainWindow.on("ready-to-show", () => mainWindow?.show());
+  // Same failure the pill has: the window survives its renderer and draws nothing. Here it is a
+  // blank white page rather than an invisible one, which looks broken rather than absent.
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    console.error("main window renderer gone:", details.reason, "— reloading");
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reload();
+    }, RENDERER_RELOAD_MS);
+  });
   // Destroyed on close (not hidden) so the app stays light while it runs in the background.
   // The pill and the tray icon keep the app running; quit from the tray menu.
   mainWindow.on("closed", () => {
@@ -304,6 +323,7 @@ async function start(): Promise<void> {
   );
 
   const pill = new PillWindow();
+  pillWindow = pill;
   // Native mic when the OS plug has one (Mac: Swift helper); otherwise Web Audio in the pill.
   const pillMic = new PillMic(pill);
   const mic = platform.microphone ? nativeMic(platform.microphone) : pillMic;
