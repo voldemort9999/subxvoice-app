@@ -13,14 +13,22 @@ const BAR_WIDTH = 0.085;
 const BAR_GAP = 0.055;
 const SUPERSAMPLE = 3;
 
-export const ACCENT = { r: 0x6d, g: 0x5e, b: 0xf8 };
+/** Deep Aubergine — the plate. */
+export const PLATE = { r: 0x3a, g: 0x0f, b: 0x34 };
+/** Ice Silver — the bars. */
+export const BAR = { r: 0xdd, g: 0xe3, b: 0xe8 };
+/** Marigold — the tallest bar only, so the mark carries all three colours at 16px. */
+export const PEAK = { r: 0xea, g: 0xaa, b: 0x00 };
+/** The tallest bar's index, which is the one that gets the accent. */
+const PEAK_BAR = BARS.indexOf(Math.max(...BARS));
 
 /** Inside a bar, or inside the rounded square behind them. */
-function shape(x: number, y: number): { bar: boolean; plate: boolean } {
+function shape(x: number, y: number): { bar: boolean; peak: boolean; plate: boolean } {
   const span = BARS.length * BAR_WIDTH + (BARS.length - 1) * BAR_GAP;
   let left = 0.5 - span / 2;
   let bar = false;
-  for (const height of BARS) {
+  let peak = false;
+  for (const [index, height] of BARS.entries()) {
     if (x >= left && x <= left + BAR_WIDTH) {
       const half = height / 2;
       // Rounded caps: the bar is a stadium, so the ends are circles of the bar's own radius.
@@ -32,7 +40,10 @@ function shape(x: number, y: number): { bar: boolean; plate: boolean } {
         (y >= top && y <= bottom) ||
         Math.hypot(x - cx, y - top) <= radius ||
         Math.hypot(x - cx, y - bottom) <= radius;
-      if (bar) break;
+      if (bar) {
+        peak = index === PEAK_BAR;
+        break;
+      }
     }
     left += BAR_WIDTH + BAR_GAP;
   }
@@ -46,7 +57,7 @@ function shape(x: number, y: number): { bar: boolean; plate: boolean } {
   const dy = Math.max(min + radius - y, 0, y - (max - radius));
   const plate = x >= min && x <= max && y >= min && y <= max && Math.hypot(dx, dy) <= radius;
 
-  return { bar, plate };
+  return { bar, peak, plate };
 }
 
 export interface MarkOptions {
@@ -70,25 +81,37 @@ export function rasterizeMark(size: number, options: MarkOptions): Uint8Array {
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       let barHits = 0;
+      let peakHits = 0;
       let plateHits = 0;
       for (let sy = 0; sy < SUPERSAMPLE; sy++) {
         for (let sx = 0; sx < SUPERSAMPLE; sx++) {
           const x = (px + (sx + 0.5) / SUPERSAMPLE) / size;
           const y = (py + (sy + 0.5) / SUPERSAMPLE) / size;
           const hit = shape(x, y);
-          if (hit.bar) barHits++;
-          else if (hit.plate) plateHits++;
+          if (hit.bar) {
+            barHits++;
+            if (hit.peak) peakHits++;
+          } else if (hit.plate) plateHits++;
         }
       }
       const samples = SUPERSAMPLE * SUPERSAMPLE;
       const bar = barHits / samples;
+      const peak = peakHits / samples;
+      const quiet = bar - peak;
       const plate = options.plate ? plateHits / samples : 0;
       const offset = (py * size + px) * 4;
 
-      // Bars sit on top of the plate.
-      buffer[offset] = options.plate ? bar * 255 + plate * ACCENT.r : bar * shade;
-      buffer[offset + 1] = options.plate ? bar * 255 + plate * ACCENT.g : bar * shade;
-      buffer[offset + 2] = options.plate ? bar * 255 + plate * ACCENT.b : bar * shade;
+      // Bars sit on top of the plate, and the tallest of them carries the accent.
+      if (options.plate) {
+        buffer[offset] = quiet * BAR.r + peak * PEAK.r + plate * PLATE.r;
+        buffer[offset + 1] = quiet * BAR.g + peak * PEAK.g + plate * PLATE.g;
+        buffer[offset + 2] = quiet * BAR.b + peak * PEAK.b + plate * PLATE.b;
+      } else {
+        // Tray: one flat colour, because the system tints it anyway.
+        buffer[offset] = bar * shade;
+        buffer[offset + 1] = bar * shade;
+        buffer[offset + 2] = bar * shade;
+      }
       buffer[offset + 3] = 255 * Math.min(1, bar + plate);
     }
   }
