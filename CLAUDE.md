@@ -67,7 +67,9 @@ unit-tested without a microphone.
 ## Gotchas this project has already been bitten by
 
 - `ELECTRON_RUN_AS_NODE=1` leaks in from VS Code terminals and makes Electron run as plain Node
-  (`electron.app` is undefined). `unset ELECTRON_RUN_AS_NODE` before `pnpm dev:desktop`.
+  (`electron.app` is undefined). `unset ELECTRON_RUN_AS_NODE` before `pnpm dev:desktop`. It also
+  breaks the **installed** `SUBXVoice.exe` when launched from such a shell — it exits at once, or
+  prints `bad option: …` (a Node error). Launch it with `explorer.exe <path>` instead.
 - **Gnani configures the session in the websocket upgrade headers**, not in a message after
   connecting. Node's and Electron's `WebSocket` (undici) takes a `{ headers }` option; the DOM type
   does not describe it. A header value above U+00FF throws, so Devanagari dictionary terms cannot

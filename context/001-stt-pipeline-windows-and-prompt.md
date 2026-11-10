@@ -869,3 +869,124 @@ Open:
   `subx-jev-<timestamp>@example.com`. Remove them from the dashboard.
 - Account-hopping still resets the daily quota (open since S-010).
 - `0.1.1` was only ever a step in testing the update path and could be deleted from the releases.
+
+---
+
+## S-013 · 2026-11-10 · The app moves to the new palette; 0.3.0 released
+
+Asked:
+> website poori ho chuki thi, abhi app ki baari hai. To sabse pehle UI wagairah hai, phir normal sab
+> kuch ekdum duplicate de dena, code wagairah, taaki tumhein samajh aa jaaye kya hai, kya nahi hai.
+> Phir start karna app UI
+> Tumne website ko deploy karte waqt tab icon ko change nahi kiya, usko bhi change kar do. Aur haan,
+> abhi jo software UI change kara rahe ho, to uska bhi jo software ka icon hai, usko bhi change kar dena.
+> app open karo
+> ekdum achhe se sab kuch update ... push kar do. Jo bhi deploy wagairah bachi hai, sab kuch deploy kar
+> do, update push kar do, EXE ready kar do, website pe laga do EXE ... abhi main demo video banane wala hoon
+
+Done, in order:
+
+- Read every renderer file (pages, `shared/*`, pill, platform `Chrome.tsx`) and the website's
+  `src/styles.css`, `primitives.tsx`, `Navbar`, `HowItWorks`, `Hero` as the reference.
+- **Website favicon.** The files in `subxvoice-web/public/` were already the new mark and the live
+  site served them byte-identical (md5 compared). The stale tab was the browser's own favicon store,
+  keyed by URL. `src/routes/__root.tsx` now links `favicon.ico?v=2`, `icon-512.png?v=2`,
+  `apple-touch-icon.png?v=2`. Commit `6fdf2c4` in `voldemort9999/subxvoice`, pushed; the push
+  triggered the Vercel production build, and the live HTML then carried `?v=2`.
+- **App icon.** Source icons were already new; 0.2.0 had shipped before commit `6b7a3e3`, so the
+  installed app still showed the old one. `main/tray.ts`: Windows now gets the full mark
+  (`plate: true`), Mac keeps the template of bars. `shared/mark.ts` exports `BARS`, `BAR_WIDTH`,
+  `BAR_GAP`, `PEAK_BAR`; new `renderer/src/shared/Mark.tsx` draws the sidebar/sign-in logo from them.
+- **Redesign of every screen** on Ice Silver / Deep Aubergine / Marigold. `styles.css` rewritten as
+  role tokens (`--page --paper --ink --ink-soft --ink-faint --rule --rule-strong --well --marigold
+  --on-marigold --accent-ink --side*`), light and dark from the same three colours. `ui.tsx`: `Card`
+  became `Section` (heading on a hairline), `Stat` became `Figure`/`Figures` (rules between,
+  Bricolage numerals), `Badge` removed, new `Notice`, `TextAction`, `FIELD`. Sidebar is Aubergine
+  with the current page in Marigold type. New `shared/AuthShell.tsx` splits SignIn and Onboarding
+  into an Aubergine panel and a form; SignIn quotes the website hero's real heard/typed pair,
+  Onboarding numbers its three steps. Pill fixed to Aubergine, newest waveform bar Marigold, errors
+  in Marigold. The decisions and in-app rules went to `docs/decisions.md` (2026-11-10, "the user's
+  voice is a typeface") and `docs/design.md`, section "In the desktop app".
+- Fonts: `pnpm add -D` (run inside `apps/desktop`; from the root with `--filter` it printed nothing
+  and installed nothing) of `@fontsource-variable/archivo`, `@fontsource-variable/bricolage-grotesque`
+  (`opsz.css`), `@fontsource/dm-mono`, `@fontsource-variable/noto-sans-devanagari`, imported in
+  `main.tsx` and `pill/main.tsx`. Renderer output is 1.2 MB.
+- `useTheme` default flipped to light, key renamed `subx.theme.v2` (see Established).
+- Verified with `pnpm check` (10/10 tasks, 40 desktop tests) and screenshots of every page, light,
+  dark, first run, and five pill states on white and dark backgrounds.
+- Released: version `0.3.0` in `apps/desktop/package.json`; `pnpm dist:win` first as a dry run
+  (koffi present at `app.asar.unpacked/node_modules/@koromix/koffi-win32-x64/win32_x64/koffi.node`,
+  `win-unpacked/SUBXVoice.exe` stayed up); commit `394c600` pushed to `subxvoice-app`; then
+  `pnpm release:win`. Release `v0.3.0` is not a draft, `latest.yml` says 0.3.0, and
+  `releases/latest/download/SUBXVoice-windows-setup.exe` returned 113,180,645 bytes, identical to
+  the local build. The site needed no redeploy for it.
+- Installed 0.3.0 on this machine with `dist/SUBXVoice-windows-setup.exe /S` (in place into
+  `%LOCALAPPDATA%\Programs\@subxdesktop`, `ProductVersion 0.3.0.0`), launched it, and ran
+  `ie4uinit.exe -show` to refresh the icon cache.
+
+Did not work:
+
+- **Unlayered base styles overrode every Tailwind colour class.** The first `styles.css` put
+  `* { border-color: var(--rule) }` outside any layer; unlayered CSS beats `@layer utilities`, so
+  `border-marigold` rendered grey and the dashboard's typed-text edge was invisible. Fixed by moving
+  all element defaults into `@layer base`. Seen only in a screenshot; types and tests cannot catch it.
+- **Every `Field` drew a second rule under its section heading**: `first:border-t-0` never matched
+  because the heading div was the first child. `Section` now wraps its children in a `<div>`.
+- **"under a minute" broke across two lines** as a 34px Bricolage figure. `Figure` sets values
+  longer than 7 characters at 19px, no-wrap. `formatSpan` was left alone because the sidebar uses it
+  inside a sentence.
+- **The Playwright MCP browser was locked** by another session ("Browser is already in use … use
+  --isolated"). Screenshots were taken with headless Edge instead (below).
+- **The dev app could not be screenshotted while the installed app ran**: the single-instance lock
+  makes the second copy exit, and closing the user's running app just for screenshots was avoided.
+  Solved with a browser preview harness (Established).
+- Headless Edge sometimes captured a page partway through the 280ms `animate-arrive`, giving a
+  washed-out frame; reshooting fixed it. A harness artefact, not an app bug.
+- **Bash heredocs holding long text failed twice** with "unexpected EOF while looking for matching
+  `'`" — a Python replacement script and this journal entry. Shorter heredocs of the same shape
+  worked; cause not pinned down. Writing the text to a scratch file with the Write tool works.
+- **The installed 0.3.0 appeared to exit instantly** when started with `Start-Process` from the
+  agent's PowerShell. Running the exe directly printed `bad option: --enable-logging=stderr`, which
+  is a Node error: `ELECTRON_RUN_AS_NODE=1` leaks into the agent's shells from VS Code, so the
+  packaged exe ran as Node. Launching through `explorer.exe <path>` (clean environment) started it.
+  Nothing was wrong with the build. Added to `CLAUDE.md` gotchas.
+- A wait loop grepped dev output for "start electron app"; electron-vite prints "starting electron
+  app", so it hung until stopped.
+
+Established:
+
+- The old theme hook wrote the resolved theme back on every launch, so every existing install had
+  `subx.theme = "dark"` stored without anyone having chosen it. Changing only the default would have
+  left all of them dark — hence the new key.
+- Browsers cache favicons apart from HTTP caching, keyed by icon URL; replacing the file does
+  nothing for returning visitors. Version the URL.
+- **Preview harness for the renderer**, faster than changing the default page and rebuilding:
+  plain `vite` with `root` = `apps/desktop/src/renderer`; `@vitejs/plugin-react` and
+  `@tailwindcss/vite` resolved through `createRequire` from `apps/desktop/package.json`; the
+  `@platform` alias to `platform/win`; a `transformIndexHtml` plugin that strips the CSP meta and
+  prepends a module script defining a stub `window.subx` (shape from `preload/index.ts`). The stub
+  read a copy of a real `accounts/<id>/history.json` with timestamps shifted to today, and query
+  params chose page (by clicking the sidebar button in the DOM), theme, signed-out, onboarding,
+  empty state and pill state. Screenshots:
+  `msedge --headless=new --window-size=W,H --virtual-time-budget=8000 --screenshot=out.png URL`.
+  It lived in the session scratchpad and is gone; rebuild it from this description.
+- `release.mjs` runs the same `build-icon → electron-vite build → electron-builder` sequence as
+  `dist:win`, and both unpack koffi. Only a bare `npx electron-builder` misses it (S-012).
+- This machine's account data is in `%APPDATA%\SUBXVoice\accounts\<id>\` — four accounts, 1 to
+  18 records each.
+
+User decided:
+
+- Accepted both open design calls after using the app: the voice carried by typeface (DM Mono
+  heard, Archivo typed) and the pill Aubergine in both themes — "UI bhi achhi hai, dono cheezein
+  achhi hain".
+- Asked for everything pushed, released and live before recording a demo video, and wants that
+  video made by Claude in a later session.
+
+Open:
+
+- **Demo video.** Plan offered: the user records real dictation on screen (Win+Alt+R or OBS); a
+  session builds a Remotion composition on the site's palette and type around that recording and
+  renders an MP4 locally.
+- Account-hopping still resets the daily quota (open since S-010).
+- Two Supabase test accounts from S-012 still exist; `0.1.1` could be deleted from the releases.
