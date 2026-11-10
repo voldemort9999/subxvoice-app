@@ -724,3 +724,148 @@ Open:
   for that purpose. A real address would be better.
 - macOS has an installer target and a `release:mac` script, but has never been built or published
   from this machine.
+
+---
+
+## S-012 · 2026-11-02 → 2026-11-10 · Composing, three releases of fixes, and the site rebuilt on a new palette
+
+Asked:
+> ek maine thoda lamba bola tha aur specifically aaya hi nahi, woh Hindi text mein hi paste ho gaya
+> ... boot ke time pe jo logo hota hai neeche wala ... randomly, matlab do-teen ghante mein woh chala
+> hi jaata hai ... main kitni baar app ko open karne ki try karun, koi farak nahi padta
+> ... shayad ek sath 2-2 instance hai, 1 hi rehne do baki ko hatao
+> ... speed me fix karo jaldi  *(screenshot: pill showing "Failed to construct 'ClipboardItem'")*
+> ... usi hold mein hi humein ek Jev model hai, jo ki ek type-safe AI hai ... do mein se ek option
+> choose karna hoga usko ... ya toh email writing ya phir message writing
+> ... main complete redesign ki baat kar raha hoon. Main halki-si theme change ki baat nahi kar raha
+> hoon, jo hamesha tum samajhte ho. Complete ka matlab complete
+> ... jo tumne specifically jo ye lamba-lamba sa font type choose kar rakha hai na, font mujhe achha
+> nahi laga
+> ... third color hai, marigold, uska jo accent hai, wo itna dikh nahi raha hai ... aisa lag raha hai
+> do hi colors hain
+
+Done, in order:
+
+- **0.1.3 — single-instance lock.** `apps/desktop/src/main/index.ts` had no
+  `requestSingleInstanceLock()`. Added before anything else in main, so a losing instance exits
+  before reaching `migrateUserData()` and racing the winner over the data folder.
+  `app.on("second-instance")` raises the existing window. Verified on the packaged build: launched
+  three times, one main process throughout, two renderers, one visible window.
+- **0.1.4 — the long-dictation failure and the dead pill.** Both root-caused below.
+- **0.1.5 — clipboard.** `new ClipboardItem({})` throws, and `snapshotClipboard()` built one per
+  clipboard item from whatever formats it could read; a clipboard holding something unreadable
+  produced an empty bag and the throw travelled out of `insert()`. Snapshot now drops unreadable
+  items and never throws, returning `null` on failure — distinct from `[]`, so a clipboard that
+  could not be read is left as pasted rather than cleared. Both `platform-win` and `platform-mac`
+  copies updated; 6 tests in `packages/platform-win/src/clipboard.test.ts`.
+- **0.2.0 — composing.** `typesafe/jev-1.14` classifies every transcript after STT and before the
+  rewrite. New `packages/core/src/contracts/decider.ts`, `packages/providers/src/decider/jev.ts`,
+  `INTENT_CRITERIA`/`INTENT_QUESTION`/`emailPrompt`/`messagePrompt` in `packages/core/src/prompts.ts`,
+  and `classify()`/`compose()` in `pipeline.ts` behind a 0.7 threshold. `supabase/functions/llm`
+  became path-aware so `/llm/decisions` reaches the decisions endpoint. Tones (`professional` |
+  `formal` | `casual`) are per kind, set in a third onboarding step and in Settings → Writing.
+  Emails are always English and signed with the account name; messages keep the spoken language.
+  5 new pipeline tests, all about when composing is *not* allowed.
+- **Website: complete redesign** on Ice Silver / Deep Aubergine / Marigold. Rewrote
+  `src/styles.css` tokens, `primitives.tsx`, `Navbar`, `Hero`, `HowItWorks`, `Writing`, `UseCases`,
+  `Features`, `Closing`, `StubPage`; new `Waveform.tsx` and `Reveal.tsx`. Deleted `Demo.tsx` and
+  `Showcase.tsx` — with `UseCases` they were the same before-and-after three times over, which is
+  what made the page read as a template. Deleted 46 unused shadcn components in
+  `src/components/ui/` and `src/hooks/`; nothing imported them and they held the last old tokens.
+- **Motion** added after the user called the page plain: `Reveal.tsx` (10px, 500ms, once,
+  `IntersectionObserver`), a breathing waveform, a looping hero transcript, a cross-fade on tab
+  change, a pulsing download dot. `prefers-reduced-motion` honoured in CSS and again via
+  `matchMedia` inside `Reveal`.
+- **Marigold raised** after the user said it read as two colours: the CTA became a Marigold fill
+  with Aubergine text, every `SectionHeader` opens on a Marigold rule, the three step numerals are
+  Marigold, and the "what it typed" column carries a Marigold edge.
+- **The mark moved to the new palette.** `apps/desktop/src/shared/mark.ts` — `shape()` now reports
+  which bar was hit so the tallest can be Marigold on its own. One definition feeds the window
+  icon, the tray, the installer and the website's regenerated favicons.
+- Journal and `docs/decisions.md` updated; the design system written to `docs/design.md`.
+
+Did not work:
+
+- **The long dictation reproduced only with the app's own provider routing.** History already held
+  the honest symptom — `rewriteError: "Rewriting left the text in its original script"`,
+  `llmMs 1706`, output the full 693 characters with one hyphen changed. Replaying it against the
+  live backend passed every time, which was the clue: the app sends
+  `provider: { order: ["cerebras", "groq"] }` and the replay sent no preference. Pinned to
+  Cerebras it failed **7 of 7**; on Groq it passed 3 of 3 in ~750ms; CoreWeave, BaseTen and Near AI
+  all passed. **Cerebras-served `gpt-oss-120b` stops following the system prompt once the input
+  gets long** and hands back the Devanagari. Short inputs — all of the testing until then — pass on
+  Cerebras, which is why it had never shown. Groq now leads and Cerebras is `ignore`d outright,
+  reversing the "cerebras is fastest" note that came from short-sample benchmarking.
+- **A dead pill stayed dead, and opening the app did nothing.** Killing the pill's renderer
+  reproduces it exactly: the window outlives its renderer, keeps reporting `isVisible()`, and draws
+  nothing — a transparent 240×64 hole. `reveal()` then refuses to act *because* the window is
+  visible, and `openMainWindow()` only ever touched the main window. `render-process-gone` and
+  `did-fail-load` were logged and nothing more. Now they reload with a growing backoff and a cap,
+  a new `revive()` re-asserts always-on-top, repositions and reloads if crashed, and it runs when
+  the app is opened and at the start of every dictation. Display add/remove/resize reposition the
+  pill. **The main window had the identical fault** and showed a blank white page for it.
+- **The two-pill report was two apps, not one.** A leftover `pnpm dev:desktop` was running beside
+  the packaged app. It predates the lock so it never asked for one, and it runs as `electron.exe`,
+  so looking for `SUBXVoice.exe` does not find it. Both share `userData`, so both were writing the
+  same `history.json`.
+- **Built an installer with `npx electron-builder` instead of `pnpm dist:win`.** koffi was not
+  unpacked and the installed app crashed with "Cannot find the native Koffi module". The pnpm
+  script runs the native-dependency install step; the bare command does not. Rebuilt properly.
+- **The message prompt handed the instruction straight back.** "mummy ko message bhejo ki main aaj
+  khana bahar kha lunga" came out verbatim, transliterated, instead of becoming the message.
+  `ROMAN_RULE` was in the prompt and it dominated — the model read the whole job as
+  transliteration. Fixed by stating the instruction/output distinction twice and showing it once.
+- **The first Supabase token died.** `sbp_fc40088…` returned 401 — the user had deleted it as they
+  said they would. Edge Function deploy was blocked until they issued a new one.
+- **`supabase functions deploy` refuses without `--yes`** in agent mode: `HostedMutationConsentRequiredError`.
+- **Clobbered the repo's root `package.json`** with `npx asar extract-file app.asar package.json`,
+  which writes to the current directory. `pnpm check` then failed with "Command 'check' not found".
+  Restored with `git checkout --`, along with `pnpm-lock.yaml`.
+- **Archivo Expanded was rejected** as the display face — "lamba-lamba", stretched. It widens to
+  gain presence; Bricolage Grotesque has an optical-size axis instead.
+- **Colouring one word of a headline** (`written` in Marigold) and an **empty `provider: {}`** were
+  both caught and removed — the first is a named generated-page tell, the second by the test I had
+  just written, because `{}` is truthy.
+- The hero waveform caused a **hydration mismatch**: Node and the browser serialise the same float
+  with a different last digit, so every bar reported one. Rounded before it reaches the DOM.
+
+Established:
+
+- `typesafe/jev-1.14` is a **decisions model** — it refuses `/chat/completions` by name and answers
+  on `/api/alpha/decisions` with `state` + `questions`, returning `choice`, `confidence` and a
+  probability per option. `typesafe/jev-router` is a different, chat-compatible model.
+  `~typesafe/jev-latest` is not a valid id. Classification measured at ~500ms and ~$0.000017.
+- Electron creates `userData` **before the main script runs**, so "does the folder exist" says
+  nothing about whether the app ever stored anything there.
+- NSIS upgrades in place from the appId registry key, so renaming the product did not orphan the
+  existing install — only fresh installs get `Programs\SUBXVoice`.
+- `pnpm dev:desktop` and the installed app are the same app to Windows: same `userData`, same
+  single-instance lock, and the dev one is `electron.exe`.
+- Marigold on Ice Silver is ~1.9:1 and cannot be type; Aubergine on Marigold is 7.5:1.
+- The Supabase Management API's `auth/users` endpoint returned nothing usable here, so the test
+  accounts created for reproduction could not be deleted through it.
+
+User decided:
+
+- **Jev for the classifier**, given as `https://openrouter.ai/typesafe/jev-1.14`.
+- **Three tones** — professional, formal, casual — **set separately** for email and messages.
+- **Emails always in English**, whatever language they were asked for in; messages keep the spoken
+  language.
+- **Complete redesign, not a recolour**, of both site and app: "Complete ka matlab complete."
+- **Light-led**, Ice Silver as the 60% — and **the app takes the same theme as the site**, light,
+  reversing S-009's dark-by-default reasoning.
+- **Hero artwork generated from the product's own subject** (a waveform), not photography or a
+  stock image.
+- Display font changed after seeing Archivo Expanded; Bricolage Grotesque accepted.
+- Marigold raised after it read as two colours.
+- **The app's UI redesign moves to a new chat** because of context limits. The website was to be
+  finished first, and was.
+
+Open:
+
+- **The app's interface is still on the old violet/cyan palette.** This is the next task and the
+  whole of it is briefed in `docs/design.md`.
+- Two Supabase test accounts remain: `subx-repro-1793622615@example.com` and
+  `subx-jev-<timestamp>@example.com`. Remove them from the dashboard.
+- Account-hopping still resets the daily quota (open since S-010).
+- `0.1.1` was only ever a step in testing the update path and could be deleted from the releases.

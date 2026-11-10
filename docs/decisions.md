@@ -2,6 +2,27 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-10 — Three colours at 60/30/10, and Marigold is a fill
+The user supplied Ice Silver `#DDE3E8`, Deep Aubergine `#3A0F34` and Marigold `#EAAA00` in that
+order, to be used roughly 60/30/10. Measuring Marigold on Ice Silver settled how it behaves
+everywhere: about 1.9:1, which cannot be read, so it is a fill on light ground and only becomes
+type on Aubergine (7.5:1). That makes the 10% self-enforcing — there is no way left to overuse it.
+The site went light-led; the app follows, light by default, which reverses the S-009 reasoning that
+dark suited a window sitting open beside other work. Display face is Bricolage Grotesque: Archivo
+Expanded was tried first and rejected as stretched, because it widens the face to gain presence
+where Bricolage has an optical-size axis. The whole system is written up in `docs/design.md`,
+which is the brief for the app's redesign.
+
+### 2026-11-10 — Composing is classified by a decisions model, not a chat model
+`typesafe/jev-1.14` is not reachable on `/chat/completions` — it refuses outright and names
+`/api/alpha/decisions`, which takes named criteria and returns a probability per option. That is
+why `supabase/functions/llm` is path-aware and why the pipeline can hold a real 0.7 confidence
+threshold instead of parsing prose. Measured: 12 of 12 classified correctly at ~500ms and about
+$0.000017 a call. Everything about the path is biased toward not composing — below the threshold,
+on a failed call, with no classifier, or on an empty result, the user's own words are typed —
+because typing what somebody said is never wrong, while composing uninvited destroys their
+dictation.
+
 ### 2026-11-01 — Installers go to a separate public repo, not the source repo
 `subxvoice-app` is private, and a private repo's release assets return 404 to anonymous callers —
 the website's download button and every `electron-updater` check would both have seen a repo with
