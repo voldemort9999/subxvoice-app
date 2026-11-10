@@ -100,13 +100,14 @@ describe("createWorkflow", () => {
     expect(inserter.inserted).toEqual([]);
   });
 
-  it("surfaces a command instead of typing it", async () => {
+  // "write a mail to the team" used to surface `Command: email` and paste nothing at all. The
+  // trigger is now a stated intent, so the written email is what lands at the cursor.
+  it("writes an email when asked for one out loud", async () => {
     const { workflow, inserter } = build({ spoken: "write a mail to the team" });
     const run = await workflow.open("exact");
-    const { text: message } = await run.finish(clip);
+    await run.finish(clip);
 
-    expect(message).toBe("Command: email");
-    expect(inserter.inserted).toEqual([]);
+    expect(inserter.inserted).toEqual(["formatted"]);
   });
 
   // No STT configured: the user must still get their audio back and a clear reason.
