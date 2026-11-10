@@ -1,7 +1,7 @@
 # SUBXVoice — design system
 
-The website was rebuilt on this on 2026-11-10. **The desktop app has not been, and is next.**
-Everything below is what the app must match, so this file is the brief for that work.
+The website was rebuilt on this on 2026-11-10, and the desktop app the same day. Both are held to
+everything below.
 
 Live reference: <https://subxvoice.vercel.app> · source in `pillow/subxvoice-web/`.
 
@@ -87,23 +87,24 @@ Added 2026-11-10 after the user said the page looked plain. All of it honours
    were tried and removed — they are the commonest tells of a generated page.
 6. **Copy is run against `unslop`** (see `context/INDEX.md`) for AI writing patterns.
 
-## Carrying this into the desktop app
+## In the desktop app
 
-The mark already moved: `apps/desktop/src/shared/mark.ts` draws an Aubergine plate, Ice Silver
-bars and the tallest bar in Marigold, and feeds the window icon, the tray, the installer and the
-website's favicons from one definition.
+Tokens are in `apps/desktop/src/renderer/src/styles.css` as **roles** (`--page`, `--paper`, `--ink`,
+`--ink-soft`, `--ink-faint`, `--rule`, `--well`, `--marigold`, `--on-marigold`, `--accent-ink`,
+`--side*`), so dark is a second set of roles drawn from the same three colours. Light is the
+default; the theme key is `subx.theme.v2` so installs that stored the old dark default start light.
 
-The app's interface has **not** moved. `apps/desktop/src/renderer/src/styles.css` still holds the
-old violet/cyan tokens, and every page is built on them. What must change:
-
-- Replace the token block with the values above. The app already supports light and dark via
-  `:root[data-theme]`; the user asked for **light default, same as the site**.
-- Two colours used to carry meaning there — violet for "the product acting", cyan for "the user's
-  voice". The new palette has one accent, so decide that mapping deliberately rather than
-  search-replacing: Marigold is the obvious carrier for the product acting, and voice needs
-  either a desaturated Aubergine or Marigold at lower intensity.
-- Load the same three faces. `--font-voice` already exists for Devanagari transcripts.
-- Pages to redesign: Dashboard, Insights, History, Dictionary, Settings, SignIn, Onboarding, plus
-  the pill overlay, the sidebar and the tray.
-- **The pill floats over other applications.** It should almost certainly stay Aubergine whatever
-  the window theme is, so it reads on any background.
+- **The sidebar is the inverted surface.** Aubergine, and the current page is Marigold text on it.
+- **No cards.** `Section` is a heading on a hairline; `Figure`s sit in a row divided by rules.
+  Boxes exist only for real objects: the typed text, a key (`kbd`), a menu, a `Notice`.
+- **Heard vs typed is a typeface.** Heard = `spoken` (DM Mono, `--ink-soft`); typed = Archivo, on a
+  Marigold edge where it is the hero. Devanagari falls through to Noto Sans Devanagari in every stack.
+- **Marigold marks**: the primary button, the current page and segment, today's bar, the time-saved
+  figure, the playing audio button, a chosen tone, a `Notice`. Nothing else.
+- **No red, no green.** Errors and warnings are a `Notice` (Marigold edge) or `--accent-ink` text.
+- **The pill** is always Aubergine with Silver bars; the newest bar is Marigold.
+- **One mark.** `shared/mark.ts` exports the geometry; `renderer/src/shared/Mark.tsx` draws it in the
+  sidebar and on sign-in, `main/brand.ts` for the window and tray, `build-icon.mjs` for the installer.
+  The Windows tray uses the full mark; the Mac menu bar a template of the bars alone.
+- Fonts are bundled from `@fontsource` (imported in `main.tsx` and `pill/main.tsx`); the window's
+  CSP allows only `'self'` and it has to work offline.

@@ -5,7 +5,8 @@ const DAYS = 14;
 
 /**
  * Speaking time per day, mirrored around a centre line so it reads as a waveform rather than a bar
- * chart — the one piece of decoration that is actually about the subject.
+ * chart — the one piece of decoration that is actually about the subject. Every day is Aubergine
+ * and today is Marigold: the accent marks the one bar that is still growing.
  */
 export function VoiceStrip({ records }: { records: SessionRecord[] }) {
   const today = startOfDay(Date.now());
@@ -34,8 +35,8 @@ export function VoiceStrip({ records }: { records: SessionRecord[] }) {
               title={`${new Date(start).toLocaleDateString()}: ${formatSpeechTotal(ms)}`}
             >
               <div
-                className={`w-full max-w-4 rounded-full ${
-                  ms ? (start === today ? "bg-accent" : "bg-speech") : "bg-line-soft"
+                className={`w-full max-w-3.5 rounded-full ${
+                  ms ? (start === today ? "bg-marigold" : "bg-ink-soft") : "bg-rule-strong"
                 }`}
                 style={{ height: `${height}%` }}
               />
@@ -47,7 +48,7 @@ export function VoiceStrip({ records }: { records: SessionRecord[] }) {
         {days.map(({ start }) => (
           <span
             key={start}
-            className={`flex-1 text-center ${start === today ? "font-semibold text-ink" : "text-faint"}`}
+            className={`flex-1 text-center ${start === today ? "font-semibold text-ink" : "text-ink-faint"}`}
           >
             {new Date(start).toLocaleDateString([], { weekday: "narrow" })}
           </span>

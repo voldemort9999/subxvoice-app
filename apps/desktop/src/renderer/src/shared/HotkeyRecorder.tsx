@@ -65,8 +65,8 @@ export function HotkeyRecorder({
     <div>
       <div className="flex flex-wrap items-center gap-2.5">
         <kbd
-          className={`figure-num min-w-[132px] rounded-lg border px-3 py-1.5 text-center font-sans font-medium ${
-            recording ? "border-accent bg-accent-soft text-accent" : "border-line bg-raised text-ink"
+          className={`kbd min-w-[140px] py-1.5 text-center text-[13px] transition-colors ${
+            recording ? "border-marigold bg-marigold text-on-marigold" : ""
           }`}
         >
           {recording ? (pending ? hotkeyLabel(pending) : "Press keys…") : hotkeyLabel(value)}
@@ -80,7 +80,7 @@ export function HotkeyRecorder({
         )}
       </div>
 
-      <p className="mt-2 text-xs text-faint">
+      <p className="mt-2 text-xs text-ink-faint">
         {recording
           ? "Hold the keys you want, then let go. Esc to cancel."
           : "Any combination of two or more keys."}
@@ -95,8 +95,10 @@ export function HotkeyRecorder({
               type="button"
               onClick={() => onChange(keys)}
               aria-pressed={keys === value}
-              className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
-                keys === value ? "bg-accent-soft text-accent" : "bg-raised text-muted hover:text-ink"
+              className={`rounded-[3px] border px-2 py-0.5 font-mono text-xs transition-colors ${
+                keys === value
+                  ? "border-ink bg-ink text-page"
+                  : "border-rule-strong text-ink-soft hover:border-ink hover:text-ink"
               }`}
             >
               {hotkeyLabel(keys)}

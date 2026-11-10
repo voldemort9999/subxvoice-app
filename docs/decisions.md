@@ -2,6 +2,18 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-10 — In the app, the user's voice is a typeface, not a colour
+The old palette spent two colours on meaning: violet for the product acting, cyan for the user's
+voice. The new one has a single accent, so the split moved from colour to type, the same way the
+website already makes it: what the microphone heard is DM Mono in `--ink-soft`, what was typed is
+Archivo on a Marigold edge. Marigold keeps "the product acting and its result" — the primary
+button, the current page, today's bar, time saved. There is no red or green left either; anything
+needing attention is a `Notice` with a Marigold edge, and the pill shows errors as Marigold type on
+Aubergine. The pill is Aubergine in both themes because it floats over other apps. The sidebar is
+the one inverted surface, which is what lets the current page be Marigold *text*. Fonts are
+bundled from `@fontsource` rather than linked from Google as the site does: the window must work
+offline and its CSP allows only `'self'`.
+
 ### 2026-11-10 — Three colours at 60/30/10, and Marigold is a fill
 The user supplied Ice Silver `#DDE3E8`, Deep Aubergine `#3A0F34` and Marigold `#EAAA00` in that
 order, to be used roughly 60/30/10. Measuring Marigold on Ice Silver settled how it behaves

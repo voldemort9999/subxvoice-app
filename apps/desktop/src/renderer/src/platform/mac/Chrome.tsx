@@ -10,7 +10,7 @@ export const TITLE_BAR_DRAG = "[-webkit-app-region:drag]";
 
 export function PermissionsIntro() {
   return (
-    <p className="text-muted">
+    <p className="text-ink-soft">
       macOS asks for three permissions. After you allow one in System Settings, this list updates on its own.
     </p>
   );
@@ -18,7 +18,7 @@ export function PermissionsIntro() {
 
 export function HotkeyNote() {
   return (
-    <p className="text-muted">
+    <p className="text-ink-soft">
       If the emoji picker opens when you press fn, set System Settings → Keyboard → "Press 🌐 key to" → "Do
       Nothing".
     </p>

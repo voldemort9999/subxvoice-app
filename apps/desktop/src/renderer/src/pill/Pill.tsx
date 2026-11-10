@@ -58,13 +58,15 @@ export function Pill() {
         onMouseLeave={() => hoverChanged(false)}
         onClick={() => window.subx.pill.click()}
         aria-label="Open SUBXVoice"
-        className={`flex max-w-[232px] items-center justify-center gap-1.5 rounded-full border border-white/20 bg-neutral-900/90 text-white shadow-lg transition-all duration-200 ${SHAPE[state.kind]}`}
+        className={`flex max-w-[232px] items-center justify-center gap-1.5 rounded-full border border-silver/15 bg-plate text-silver shadow-[0_4px_14px_rgb(20_4_18/45%)] transition-all duration-200 ${SHAPE[state.kind]}`}
       >
         {state.kind === "idle" && (
           <>
-            <MicIcon className={`h-3.5 w-3.5 ${hover ? "text-white" : "text-white/75"}`} />
+            <MicIcon className={`h-3.5 w-3.5 ${hover ? "text-marigold" : "text-silver/75"}`} />
             {hover && (
-              <span className="text-xs whitespace-nowrap">Hold {hotkeyLabel(info?.hotkeys[0]?.keys)}</span>
+              <span className="text-xs font-medium whitespace-nowrap">
+                Hold {hotkeyLabel(info?.hotkeys[0]?.keys)}
+              </span>
             )}
           </>
         )}
@@ -72,7 +74,7 @@ export function Pill() {
         {state.kind === "processing" &&
           (state.message ? (
             // The words as heard, so there is something to read while the model works.
-            <span className="truncate text-xs text-white/70 italic">{state.message}</span>
+            <span className="truncate font-mono text-xs text-silver/70">{state.message}</span>
           ) : (
             <Dots />
           ))}
@@ -81,26 +83,33 @@ export function Pill() {
             {/* The words still went in; the dot says they are not in the script that was asked for. */}
             {state.warning && (
               <span role="img" aria-label={state.warning} title={state.warning}>
-                <span className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="block h-1.5 w-1.5 rounded-full bg-marigold" />
               </span>
             )}
-            <span className="truncate text-xs text-white/90">{state.message}</span>
+            <span className="truncate text-xs font-medium text-silver">{state.message}</span>
           </span>
         )}
-        {state.kind === "error" && <span className="truncate text-xs text-red-300">{state.message}</span>}
+        {/* No red in the palette; on Aubergine, Marigold type is legible and reads as "look at this". */}
+        {state.kind === "error" && (
+          <span className="truncate text-xs font-medium text-marigold">{state.message}</span>
+        )}
       </button>
     </div>
   );
 }
 
+/** Levels scroll in from the right, so the newest bar — the sound right now — carries the Marigold. */
 function Waveform({ levels }: { levels: number[] }) {
+  const newest = levels.length - 1;
   return (
     <div className="flex h-5 items-center gap-[3px]">
       {levels.map((level, index) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional
           key={index}
-          className="w-[3px] rounded-full bg-white transition-[height] duration-75"
+          className={`w-[3px] rounded-full transition-[height] duration-75 ${
+            index === newest ? "bg-marigold" : "bg-silver"
+          }`}
           style={{ height: `${3 + Math.min(1, level * 8) * 17}px` }}
         />
       ))}
@@ -114,7 +123,7 @@ function Dots() {
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}
-          className="h-1.5 w-1.5 animate-pulse rounded-full bg-white"
+          className="h-1.5 w-1.5 animate-pulse rounded-full bg-silver"
           style={{ animationDelay: `${delay}ms` }}
         />
       ))}

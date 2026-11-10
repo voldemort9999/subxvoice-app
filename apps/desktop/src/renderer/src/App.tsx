@@ -34,20 +34,18 @@ export function App() {
 
   // Nothing is drawn until the saved session has been checked, so the window never flashes the
   // sign-in form at someone who is already signed in.
-  if (!account) return <div className="h-full bg-canvas" />;
+  if (!account) return <div className="h-full bg-page" />;
   if (!account.signedIn) return <SignInPage />;
   // Asked once: a name, and the key they will hold every time.
   if (!account.onboarded) return <OnboardingPage info={info} email={account.email} />;
 
   return (
-    <div className="flex h-full bg-canvas">
+    <div className="flex h-full bg-page">
       <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} ready={ready} usage={usage} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header
-          className={`flex h-12 shrink-0 items-center justify-between gap-4 border-b border-line px-6 ${TITLE_BAR_DRAG}`}
-        >
-          <h1 className="text-[15px] font-semibold tracking-tight">{TITLES[page]}</h1>
+        <header className={`flex h-16 shrink-0 items-end justify-between gap-4 px-8 pb-3 ${TITLE_BAR_DRAG}`}>
+          <h1 className="text-[26px] leading-none">{TITLES[page]}</h1>
           <div className="flex items-center gap-1.5">
             <IconButton
               icon={theme === "dark" ? SunIcon : MoonIcon}
@@ -59,7 +57,8 @@ export function App() {
         </header>
 
         <main className="scroll-area flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-5xl px-6 py-6">
+          {/* Keyed by page so each one arrives with a short rise, answering the click that chose it. */}
+          <div key={page} className="animate-arrive mx-auto max-w-5xl px-8 pt-4 pb-10">
             {page === "dashboard" && <DashboardPage hotkey={hotkey} onNavigate={setPage} />}
             {page === "insights" && <InsightsPage hotkey={hotkey} />}
             {page === "history" && <HistoryPage hotkey={hotkey} />}

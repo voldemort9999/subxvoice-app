@@ -17,7 +17,7 @@ export function HistoryRow({ record }: { record: SessionRecord }) {
   }
 
   return (
-    <li className="group py-2">
+    <li className="group py-3">
       <div className="flex items-center gap-3">
         <AudioButton id={record.id} />
 
@@ -30,29 +30,20 @@ export function HistoryRow({ record }: { record: SessionRecord }) {
               aria-expanded={open}
               className="block w-full text-left"
             >
-              <p className={`voice-text ${open ? "" : "truncate"}`}>{record.finalText}</p>
+              <p className={`voice-text text-[14px] ${open ? "" : "truncate"}`}>{record.finalText}</p>
             </button>
           ) : (
-            <p className="truncate text-muted">No text came back for this one.</p>
+            <p className="truncate text-ink-soft">No text came back for this one.</p>
           )}
 
-          <p className="figure-num mt-0.5 flex items-center gap-1.5 text-xs text-faint">
+          <p className="figure-num mt-1 flex items-center gap-3 text-xs text-ink-faint">
             <span>{formatTime(record.createdAt)}</span>
-            <span aria-hidden="true">·</span>
             <span>{formatDuration(record.audioMs ?? 0)}</span>
-            {record.context.appName && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="truncate">{record.context.appName}</span>
-              </>
-            )}
+            {record.context.appName && <span className="truncate">{record.context.appName}</span>}
             {record.rewriteError && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="truncate text-warn" title={record.rewriteError}>
-                  went in as heard
-                </span>
-              </>
+              <span className="truncate font-medium text-accent-ink" title={record.rewriteError}>
+                went in as heard
+              </span>
             )}
           </p>
         </div>
@@ -62,18 +53,17 @@ export function HistoryRow({ record }: { record: SessionRecord }) {
         <IconButton
           icon={TrashIcon}
           label="Delete recording"
-          tone="danger"
           onClick={remove}
           className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
         />
       </div>
 
       {open && changed && (
-        <div className="mt-2 ml-11 rounded-lg bg-raised px-3 py-2">
-          <p className="mb-1 text-xs text-faint">
+        <div className="mt-2.5 ml-11 border-l-2 border-rule-strong pl-3">
+          <p className="mb-1 text-xs text-ink-faint">
             {hasDevanagari(record.rawText) ? "Heard in Devanagari" : "Heard as"}
           </p>
-          <p className="voice-text text-muted">{record.rawText}</p>
+          <p className="spoken">{record.rawText}</p>
         </div>
       )}
     </li>

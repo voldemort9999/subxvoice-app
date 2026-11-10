@@ -5,7 +5,7 @@ import { HistoryRow } from "../shared/HistoryRow";
 import { useHistory } from "../shared/hooks";
 import { DownloadIcon, SearchIcon } from "../shared/icons";
 import { hasDevanagari, totalWords, wordCount } from "../shared/stats";
-import { Badge, Card, Empty, IconButton, Segmented } from "../shared/ui";
+import { Empty, FIELD, IconButton, Section, Segmented } from "../shared/ui";
 
 type Filter = "all" | "devanagari" | "long";
 
@@ -47,17 +47,17 @@ export function HistoryPage({ hotkey }: { hotkey: string }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center gap-5">
         <label className="relative min-w-0 flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-faint" />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search what you said"
             aria-label="Search dictations"
-            className="w-full rounded-lg border border-line bg-surface py-2 pr-3 pl-9 text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            className={`${FIELD} pl-9`}
           />
         </label>
         <Segmented options={FILTERS} value={filter} onChange={setFilter} label="Filter dictations" />
@@ -68,22 +68,24 @@ export function HistoryPage({ hotkey }: { hotkey: string }) {
         />
       </div>
 
-      <Card
+      <Section
         title={
           query || filter !== "all" ? `${matches.length} of ${records.length}` : "Everything you've said"
         }
-        action={<Badge>{formatCount(totalWords(matches))} words</Badge>}
+        action={
+          <span className="figure-num text-xs text-ink-soft">{formatCount(totalWords(matches))} words</span>
+        }
       >
         {records.length === 0 ? (
           <Empty>Nothing here yet. Hold {hotkey} in any app and start talking.</Empty>
         ) : matches.length === 0 ? (
           <Empty>No dictation matches that. Try a different word, or clear the filter.</Empty>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-7">
             {[...groups].map(([day, dayRecords]) => (
               <section key={day}>
-                <p className="mb-1 font-medium text-muted">{dayLabel(day)}</p>
-                <ul className="divide-y divide-line-soft">
+                <h3 className="mb-1 text-[14px] text-ink-soft">{dayLabel(day)}</h3>
+                <ul className="divide-y divide-rule">
                   {dayRecords.map((record) => (
                     <HistoryRow key={record.id} record={record} />
                   ))}
@@ -92,9 +94,9 @@ export function HistoryPage({ hotkey }: { hotkey: string }) {
             ))}
           </div>
         )}
-      </Card>
+      </Section>
 
-      <p className="px-1 text-xs text-faint">Recordings and transcripts are stored only on this computer.</p>
+      <p className="text-xs text-ink-faint">Recordings and transcripts are stored only on this computer.</p>
     </div>
   );
 }

@@ -1,9 +1,13 @@
 import { type FormEvent, useState } from "react";
-import { MicIcon } from "../shared/icons";
-import { Button } from "../shared/ui";
+import { AuthShell } from "../shared/AuthShell";
+import { Button, FIELD, Notice } from "../shared/ui";
 
-const INPUT =
-  "w-full rounded-lg border border-line bg-canvas px-3 py-2 text-ink outline-none placeholder:text-faint focus:border-accent";
+/**
+ * Real output, not copy written for the screen: Gnani returned the Devanagari and the rewrite
+ * returned the Roman — the same pair the website's hero shows.
+ */
+const HEARD = "कल मीटिंग है तो slides ready रखना please";
+const TYPED = "Kal meeting hai toh slides ready rakhna please.";
 
 /**
  * The whole account flow: email and a password, and the same form either way. There is no email
@@ -57,108 +61,90 @@ export function SignInPage() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-canvas px-6">
-      <div className="w-full max-w-[340px]">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              fill="none"
-              stroke="var(--accent-ink)"
-              aria-hidden="true"
-            >
-              <path
-                d="M4 12h1.5M8 7.5v9M12 4.5v15M16 8.5v7M20 11h-1.5"
-                strokeWidth={2}
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>
-          <h1 className="text-[19px] font-semibold tracking-tight">
-            {mode === "in" ? "Sign in to SUBXVoice" : "Create your account"}
-          </h1>
-          <p className="mt-1 text-muted">Your account unlocks speech-to-text and rewriting.</p>
-        </div>
+    <AuthShell
+      aside={
+        <figure className="m-0">
+          <p className="spoken text-side-soft">{HEARD}</p>
+          <p className="mt-4 border-l-[3px] border-marigold pl-4 text-[21px] leading-snug font-medium">
+            {TYPED}
+          </p>
+          <figcaption className="mt-6 text-xs text-side-soft">
+            Heard in Devanagari, typed in Roman letters, in the app you were already using.
+          </figcaption>
+        </figure>
+      }
+    >
+      <h1 className="text-[28px]">{mode === "in" ? "Sign in" : "Create your account"}</h1>
+      <p className="mt-2 mb-7 text-ink-soft">Your account unlocks speech-to-text and rewriting.</p>
 
-        <form onSubmit={submit} className="space-y-3">
-          <label className="block space-y-1.5">
-            <span className="font-medium">Email</span>
-            <input
-              className={INPUT}
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-            />
-          </label>
+      <form onSubmit={submit} className="space-y-4">
+        <label className="block space-y-1.5">
+          <span className="font-semibold">Email</span>
+          <input
+            className={FIELD}
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+          />
+        </label>
 
+        <label className="block space-y-1.5">
+          <span className="font-semibold">Password</span>
+          <input
+            className={FIELD}
+            type="password"
+            autoComplete={mode === "in" ? "current-password" : "new-password"}
+            required
+            minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={mode === "up" ? "At least 8 characters" : ""}
+          />
+        </label>
+
+        {mode === "up" && (
           <label className="block space-y-1.5">
-            <span className="font-medium">Password</span>
+            <span className="font-semibold">Confirm password</span>
             <input
-              className={INPUT}
+              className={`${FIELD} ${mismatch ? "border-ink" : ""}`}
               type="password"
-              autoComplete={mode === "in" ? "current-password" : "new-password"}
+              autoComplete="new-password"
               required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder={mode === "up" ? "At least 8 characters" : ""}
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              placeholder="Type it again"
+              aria-invalid={mismatch}
             />
+            {mismatch && (
+              <span className="block font-medium text-accent-ink">The two passwords don't match.</span>
+            )}
           </label>
+        )}
 
-          {mode === "up" && (
-            <label className="block space-y-1.5">
-              <span className="font-medium">Confirm password</span>
-              <input
-                className={`${INPUT} ${mismatch ? "border-danger" : ""}`}
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-                placeholder="Type it again"
-              />
-              {mismatch && <span className="block text-danger">The two passwords don't match.</span>}
-            </label>
-          )}
+        {created && <Notice>Account created. Sign in with it now.</Notice>}
+        {problem && <Notice role="alert">{problem}</Notice>}
 
-          {created && (
-            <p role="status" className="rounded-lg bg-speech-soft px-3 py-2 text-speech">
-              Account created. Sign in with it now.
-            </p>
-          )}
+        <Button type="submit" variant="primary" disabled={busy || mismatch} className="w-full py-2.5">
+          {busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}
+        </Button>
+      </form>
 
-          {problem && (
-            <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-danger">
-              {problem}
-            </p>
-          )}
+      <p className="mt-5 text-ink-soft">
+        {mode === "in" ? "No account yet? " : "Already have one? "}
+        <button
+          type="button"
+          onClick={() => switchTo(mode === "in" ? "up" : "in")}
+          className="font-semibold text-ink underline decoration-marigold decoration-2 underline-offset-[3px]"
+        >
+          {mode === "in" ? "Create one" : "Sign in"}
+        </button>
+      </p>
 
-          <Button type="submit" variant="primary" disabled={busy || mismatch} className="w-full py-2">
-            {busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}
-          </Button>
-        </form>
-
-        <p className="mt-4 text-center text-muted">
-          {mode === "in" ? "No account yet? " : "Already have one? "}
-          <button
-            type="button"
-            onClick={() => switchTo(mode === "in" ? "up" : "in")}
-            className="font-medium text-accent hover:underline"
-          >
-            {mode === "in" ? "Create one" : "Sign in"}
-          </button>
-        </p>
-
-        <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-faint">
-          <MicIcon className="h-3.5 w-3.5" />
-          Recordings stay on this computer.
-        </p>
-      </div>
-    </div>
+      <p className="mt-10 text-xs text-ink-faint">Recordings stay on this computer.</p>
+    </AuthShell>
   );
 }
 

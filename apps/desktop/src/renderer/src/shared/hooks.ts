@@ -97,19 +97,23 @@ export function useMicrophones(): MicrophoneOption[] {
 
 export type Theme = "dark" | "light";
 
-const THEME_KEY = "subx.theme";
+/**
+ * A new key, not the old "subx.theme": the old default was dark and the app wrote it back on every
+ * launch, so every existing install has "dark" stored without anyone having chosen it. Reading a
+ * fresh key gives everyone the new default once; picking dark again is remembered as before.
+ */
+const THEME_KEY = "subx.theme.v2";
 
 /**
- * Dark by default: this window sits open beside whatever is being dictated into, and a bright
- * panel there is the thing people turn off first. The choice is per machine, so it lives in
- * localStorage rather than in settings.json that syncs later.
+ * Light by default, the same Ice Silver as the website (decided 2026-11-10, reversing S-009's
+ * dark default). The choice is per machine, so it lives in localStorage rather than in settings.
  */
 export function useTheme(): [Theme, (theme: Theme) => void] {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+      return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
     } catch {
-      return "dark";
+      return "light";
     }
   });
 

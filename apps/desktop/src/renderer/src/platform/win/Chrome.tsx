@@ -10,7 +10,7 @@ export const TITLE_BAR_DRAG = "";
 
 export function PermissionsIntro() {
   return (
-    <p className="text-muted">
+    <p className="text-ink-soft">
       Allow microphone access in Windows Settings. Text can't be typed into apps that run as administrator.
     </p>
   );

@@ -36,8 +36,8 @@ export function ProfileMenu({ account }: { account: AccountState }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={account.name || account.email || "Account"}
-        className={`grid h-7 w-7 place-items-center rounded-full bg-accent text-[12px] font-semibold text-accent-ink transition-opacity hover:opacity-90 ${
-          open ? "ring-2 ring-accent/40" : ""
+        className={`grid h-8 w-8 place-items-center rounded-full bg-ink font-display text-[13px] font-bold text-page transition-shadow ${
+          open ? "ring-2 ring-marigold ring-offset-2 ring-offset-page" : ""
         }`}
       >
         {initial(account)}
@@ -46,11 +46,11 @@ export function ProfileMenu({ account }: { account: AccountState }) {
       {open && (
         <div
           role="menu"
-          className="absolute top-9 right-0 z-20 w-56 rounded-xl border border-line bg-surface p-1 shadow-lg"
+          className="absolute top-10 right-0 z-20 w-60 rounded-[3px] border border-rule-strong bg-paper p-1 shadow-[0_8px_24px_rgb(58_15_52/18%)]"
         >
-          <div className="border-b border-line-soft px-3 py-2.5">
-            {account.name && <p className="truncate font-medium">{account.name}</p>}
-            <p className="truncate text-xs text-muted">{account.email}</p>
+          <div className="border-b border-rule px-3 py-2.5">
+            {account.name && <p className="truncate font-semibold">{account.name}</p>}
+            <p className="truncate text-xs text-ink-soft">{account.email}</p>
           </div>
           <button
             type="button"
@@ -59,7 +59,7 @@ export function ProfileMenu({ account }: { account: AccountState }) {
               setOpen(false);
               void window.subx.auth.signOut();
             }}
-            className="mt-1 w-full rounded-lg px-3 py-2 text-left text-muted hover:bg-ink/[0.06] hover:text-ink"
+            className="mt-1 w-full rounded-[3px] px-3 py-2 text-left text-ink-soft hover:bg-well hover:text-ink"
           >
             Sign out
           </button>

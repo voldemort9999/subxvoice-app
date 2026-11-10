@@ -18,12 +18,13 @@ export function createTray(openDashboard: () => void): Tray {
 const SIZE = 32; // 16 pt drawn at 2x for sharp retina rendering
 
 /**
- * The app's waveform mark, flat. The tray is 16 px and, on a Mac, a template image the system
- * tints for light and dark menu bars — so the plate and the brand colour are dropped here.
+ * On a Mac the menu bar wants a template image it tints for light and dark, so the bars go alone.
+ * Windows draws tray icons in full colour on a taskbar that can be either, and white bars alone
+ * vanish on a light one — so it gets the whole mark, plate and Marigold included.
  */
 function trayIcon() {
-  const isMac = process.platform === "darwin";
-  const image = brandIcon(SIZE, { plate: false, shade: isMac ? 0 : 255 });
-  if (isMac) image.setTemplateImage(true);
+  if (process.platform !== "darwin") return brandIcon(SIZE, { plate: true });
+  const image = brandIcon(SIZE, { plate: false, shade: 0 });
+  image.setTemplateImage(true);
   return image;
 }

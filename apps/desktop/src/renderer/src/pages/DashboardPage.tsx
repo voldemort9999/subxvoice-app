@@ -3,7 +3,6 @@ import { AudioButton } from "../shared/AudioButton";
 import { DAY_MS, formatCount, formatDuration, formatSpan, formatTime, streakDays } from "../shared/format";
 import { HistoryRow } from "../shared/HistoryRow";
 import { useHistory, usePermissions } from "../shared/hooks";
-import { BoltIcon, CalendarIcon, ClockIcon, MicIcon } from "../shared/icons";
 import type { PageId } from "../shared/Sidebar";
 import {
   hasDevanagari,
@@ -13,7 +12,7 @@ import {
   wordCount,
   wordsPerMinute,
 } from "../shared/stats";
-import { Badge, Button, Card, CopyButton, Empty, Stat } from "../shared/ui";
+import { Button, CopyButton, Empty, Figure, Figures, Notice, Section, TextAction } from "../shared/ui";
 import { VoiceStrip } from "../shared/VoiceStrip";
 
 const RECENT_COUNT = 6;
@@ -45,88 +44,71 @@ export function DashboardPage({
   const latest = records[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {missingPermission && (
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-warn/30 bg-warn/10 px-4 py-3">
-          <p>SUBXVoice needs microphone access before it can type for you.</p>
-          <Button variant="primary" onClick={() => onNavigate("settings")}>
-            Review permissions
-          </Button>
-        </div>
+        <Notice role="alert">
+          <div className="flex items-center justify-between gap-4">
+            <p>SUBXVoice needs microphone access before it can type for you.</p>
+            <Button variant="primary" onClick={() => onNavigate("settings")}>
+              Review permissions
+            </Button>
+          </div>
+        </Notice>
       )}
 
       {latest ? <LastDictation record={latest} /> : <FirstRun hotkey={hotkey} />}
 
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-        <Stat
+      <Figures>
+        <Figure
           label="Words this week"
           value={formatCount(totalWords(week))}
           note={`${week.length} ${week.length === 1 ? "dictation" : "dictations"}`}
-          icon={MicIcon}
         />
-        <Stat
+        <Figure
           label="Time saved"
           value={formatSpan(timeSavedMs(records))}
           note="Against typing at 40 wpm"
-          icon={ClockIcon}
-          tone="accent"
+          mark
         />
-        <Stat
+        <Figure
           label="Speaking rate"
           value={wordsPerMinute(records) ? String(wordsPerMinute(records)) : "—"}
           unit={wordsPerMinute(records) ? "wpm" : undefined}
           note={`${formatDuration(speakingMs(records))} of speech in total`}
-          icon={BoltIcon}
-          tone="speech"
         />
-        <Stat
+        <Figure
           label="Streak"
           value={streak ? String(streak) : "—"}
           unit={streak ? (streak === 1 ? "day" : "days") : undefined}
           note={streakNote(streak)}
-          icon={CalendarIcon}
         />
-      </div>
+      </Figures>
 
-      <Card
+      <Section
         title="Speaking time, last two weeks"
-        action={
-          <button
-            type="button"
-            onClick={() => onNavigate("insights")}
-            className="text-accent hover:underline"
-          >
-            More insights
-          </button>
-        }
+        action={<TextAction onClick={() => onNavigate("insights")}>More insights</TextAction>}
       >
         <VoiceStrip records={records} />
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title="Recent"
         action={
           records.length > RECENT_COUNT ? (
-            <button
-              type="button"
-              onClick={() => onNavigate("history")}
-              className="text-accent hover:underline"
-            >
-              See all {records.length}
-            </button>
+            <TextAction onClick={() => onNavigate("history")}>See all {records.length}</TextAction>
           ) : undefined
         }
       >
         {records.length === 0 ? (
           <Empty>Hold {hotkey} in any app and start talking.</Empty>
         ) : (
-          <ul className="divide-y divide-line-soft">
+          <ul className="divide-y divide-rule">
             {records.slice(0, RECENT_COUNT).map((record) => (
               <HistoryRow key={record.id} record={record} />
             ))}
           </ul>
         )}
-      </Card>
+      </Section>
     </div>
   );
 }
@@ -134,46 +116,50 @@ export function DashboardPage({
 /**
  * The hero, and the only place the whole pipeline is visible: what the microphone heard, and what
  * was actually typed. The two differ on almost every Hindi dictation, and that difference is the
- * product — so it gets the space rather than another counter.
+ * product — so it gets the space rather than another counter. Same shape as the website's hero:
+ * the heard line in DM Mono, the typed one on a Marigold edge.
  */
 function LastDictation({ record }: { record: SessionRecord }) {
   const changed = Boolean(record.rawText) && record.rawText !== record.finalText;
 
   return (
-    <section className="panel overflow-hidden rounded-2xl">
-      <div className="flex items-center justify-between gap-3 border-b border-line-soft px-5 py-3">
-        <div className="flex items-center gap-2.5">
+    <section>
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           <AudioButton id={record.id} />
           <div>
-            <p className="font-medium">Last dictation</p>
-            <p className="text-xs text-muted">
+            <p className="font-semibold">Last dictation</p>
+            <p className="figure-num text-xs text-ink-soft">
               {formatTime(record.createdAt)}
               {record.context.appName ? ` into ${record.context.appName}` : ""}
+              {`, ${formatDuration(record.audioMs ?? 0)}, ${wordCount(record.finalText)} words`}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge tone="speech">{formatDuration(record.audioMs ?? 0)}</Badge>
-          <Badge>{wordCount(record.finalText)} words</Badge>
-          <CopyButton text={record.finalText} />
-        </div>
+        <CopyButton text={record.finalText} />
       </div>
 
-      <div className="px-5 py-5">
-        {record.finalText ? (
-          <p className="voice-text max-w-[62ch] text-[19px] text-ink">{record.finalText}</p>
-        ) : (
-          <p className="text-muted">No text came back. Check that speech-to-text is connected in Settings.</p>
-        )}
-
+      <div className={changed ? "grid gap-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : ""}>
         {changed && (
-          <div className="mt-4 border-t border-line-soft pt-3.5">
-            <p className="mb-1 text-xs text-faint">
+          <div className="md:pt-1">
+            <p className="mb-2 text-xs text-ink-faint">
               {hasDevanagari(record.rawText) ? "Heard in Devanagari" : "Heard as"}
             </p>
-            <p className="voice-text max-w-[62ch] text-muted">{record.rawText}</p>
+            <p className="spoken max-h-48 overflow-y-auto">{record.rawText}</p>
           </div>
         )}
+        <div className="border-l-[3px] border-marigold bg-paper px-5 py-4">
+          {changed && <p className="mb-2 text-xs text-ink-faint">Typed</p>}
+          {record.finalText ? (
+            <p className="voice-text max-h-56 max-w-[60ch] overflow-y-auto text-[20px] leading-[1.45] text-ink">
+              {record.finalText}
+            </p>
+          ) : (
+            <p className="text-ink-soft">
+              No text came back. Check that speech-to-text is ready in Settings.
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -181,12 +167,11 @@ function LastDictation({ record }: { record: SessionRecord }) {
 
 function FirstRun({ hotkey }: { hotkey: string }) {
   return (
-    <section className="panel rounded-2xl px-5 py-8 text-center">
-      <span className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft">
-        <MicIcon className="h-5 w-5 text-accent" />
-      </span>
-      <h2 className="text-[19px] font-semibold tracking-tight">Hold {hotkey} and say something</h2>
-      <p className="mx-auto mt-2 max-w-md text-muted">
+    <section className="border-l-[3px] border-marigold bg-paper px-6 py-7">
+      <h2 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[28px]">
+        Hold <kbd className="kbd text-[15px]">{hotkey}</kbd> and say something
+      </h2>
+      <p className="mt-3 max-w-[52ch] text-[14px] leading-relaxed text-ink-soft">
         Speak Hindi, English, or both in one sentence. The text lands wherever your cursor is, and every
         recording stays on this computer.
       </p>

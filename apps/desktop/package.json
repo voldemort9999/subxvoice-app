@@ -1,7 +1,7 @@
 {
   "name": "@subx/desktop",
   "productName": "SUBXVoice",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "SUBXVoice desktop app",
   "author": "SUBXVoice",
@@ -19,6 +19,10 @@
     "build:icon": "node scripts/build-icon.mjs"
   },
   "devDependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/noto-sans-devanagari": "^5.3.0",
+    "@fontsource/dm-mono": "^5.3.0",
     "@subx/core": "workspace:*",
     "@subx/platform-mac": "workspace:*",
     "@subx/platform-win": "workspace:*",

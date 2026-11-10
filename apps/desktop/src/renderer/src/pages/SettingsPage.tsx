@@ -7,7 +7,7 @@ import { useAccount, useMicrophones, useSettings, useUpdate } from "../shared/ho
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
 import { TONE_OPTIONS } from "../shared/tones";
-import { Button, Card, Field, Select, Toggle } from "../shared/ui";
+import { Button, Field, Notice, Section, Select, Toggle } from "../shared/ui";
 
 const SCRIPTS = [
   {
@@ -30,8 +30,8 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
   const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "";
 
   return (
-    <div className="space-y-6">
-      <Card title="Dictation">
+    <div className="space-y-10">
+      <Section title="Dictation">
         <Field
           label="Hotkey"
           hint="Hold to dictate, let go to stop. Press any other key while holding to cancel."
@@ -54,7 +54,7 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
               }))}
             />
           )}
-          <div className="mt-2 text-xs text-muted">
+          <div className="mt-2 text-xs text-ink-soft">
             <HotkeyNote />
           </div>
         </Field>
@@ -70,7 +70,11 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
             options={SCRIPTS}
           />
           {info && !info.providers.llm && settings?.script === "roman" && (
-            <p className="mt-2 text-warn">Roman letters need OPENROUTER_API_KEY. See Engines below.</p>
+            <div className="mt-3">
+              <Notice>
+                Roman letters need the rewriting engine, which is unavailable. See Account below.
+              </Notice>
+            </div>
           )}
         </Field>
 
@@ -88,13 +92,13 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
               empty="No microphone found. Allow microphone access, then reopen this page."
             />
           )}
-          <div className="mt-2 text-xs text-muted">
+          <div className="mt-2 text-xs leading-relaxed text-ink-soft">
             <MicrophoneNote />
           </div>
         </Field>
-      </Card>
+      </Section>
 
-      <Card title="Startup">
+      <Section title="Startup">
         <Field
           label="Open at login"
           hint="SUBXVoice starts in the background when you sign in to Windows, ready for the hotkey."
@@ -105,10 +109,10 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
             onChange={(checked) => update({ launchAtLogin: checked })}
           />
         </Field>
-      </Card>
+      </Section>
 
-      <Card title="Writing">
-        <p className="mb-4 max-w-xl text-muted">
+      <Section title="Writing">
+        <p className="mb-5 max-w-xl text-[14px] leading-relaxed text-ink-soft">
           Ask out loud for an email or a message — “write a mail to my manager about tomorrow's leave” — and
           SUBXVoice writes it instead of typing what you said. Everything else is dictated exactly as spoken.
         </p>
@@ -134,37 +138,43 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
             options={TONE_OPTIONS.map((tone) => ({ value: tone.value, label: tone.label }))}
           />
         </Field>
-        <p className="mt-1 text-xs text-faint">
-          {TONE_OPTIONS.map((tone) => `${tone.label} — ${tone.hint}`).join("   ·   ")}
-        </p>
-      </Card>
+        {/* What the three tones actually sound like, since the names alone don't say. */}
+        <dl className="mt-1 grid gap-x-8 gap-y-2 border-t border-rule pt-4 sm:grid-cols-3">
+          {TONE_OPTIONS.map((tone) => (
+            <div key={tone.value}>
+              <dt className="text-xs font-semibold">{tone.label}</dt>
+              <dd className="m-0 mt-0.5 text-xs leading-relaxed text-ink-soft">{tone.hint}</dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
 
-      <Card title="Permissions">
+      <Section title="Permissions">
         <div className="mb-3">
           <PermissionsIntro />
         </div>
         <PermissionList />
-      </Card>
+      </Section>
 
-      <Card title="Account">
+      <Section title="Account">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-medium">{account?.email ?? "Not signed in"}</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="font-semibold">{account?.email ?? "Not signed in"}</p>
+            <p className="mt-1 text-xs text-ink-soft">
               Speech-to-text and rewriting run on your account. No API keys are stored on this computer.
             </p>
           </div>
           <Button onClick={() => window.subx.auth.signOut()}>Sign out</Button>
         </div>
-        <div className="mt-4 space-y-2.5 border-t border-line-soft pt-3.5">
+        <div className="mt-4 space-y-2.5 border-t border-rule pt-4">
           <EngineStatus ready={info?.providers.stt} name="Speech to text" />
           <EngineStatus ready={info?.providers.llm} name="Rewriting and Roman script" />
         </div>
-      </Card>
+      </Section>
 
-      <Card title="Recordings">
+      <Section title="Recordings">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-md text-muted">
+          <p className="max-w-md text-ink-soft">
             Audio and transcripts are saved only on this computer. Delete any of them from History.
           </p>
           <Button onClick={() => window.subx.app.openRecordingsFolder()}>
@@ -174,19 +184,19 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
             </span>
           </Button>
         </div>
-      </Card>
+      </Section>
 
-      <Card title="Updates">
+      <Section title="Updates">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="figure-num font-medium">SUBXVoice {info?.version ?? ""}</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="figure-num font-semibold">SUBXVoice {info?.version ?? ""}</p>
+            <p className="mt-1 text-xs text-ink-soft">
               <UpdateLine state={update$} />
             </p>
           </div>
           <UpdateAction state={update$} />
         </div>
-      </Card>
+      </Section>
     </div>
   );
 }
@@ -209,7 +219,9 @@ function UpdateLine({ state }: { state: UpdateState | null }) {
       return <>Version {state.version} is ready. It installs when you quit, or restart now.</>;
     case "error":
       // The reason is shown rather than swallowed: a silent updater is one nobody can debug.
-      return <span className="text-warn">Could not check for updates — {state.message}</span>;
+      return (
+        <span className="font-medium text-accent-ink">Could not check for updates: {state.message}</span>
+      );
     case "unsupported":
       return <>{state.reason}</>;
     default:
@@ -219,7 +231,11 @@ function UpdateLine({ state }: { state: UpdateState | null }) {
 
 function UpdateAction({ state }: { state: UpdateState | null }) {
   if (state?.kind === "ready") {
-    return <Button onClick={() => window.subx.update.install()}>Restart and install</Button>;
+    return (
+      <Button variant="primary" onClick={() => window.subx.update.install()}>
+        Restart and install
+      </Button>
+    );
   }
   const busy = state?.kind === "checking" || state?.kind === "downloading";
   if (state?.kind === "unsupported") return null;
@@ -242,11 +258,13 @@ function EngineStatus({ ready, name }: { ready: boolean | undefined; name: strin
   return (
     <p className="flex items-center gap-2">
       <span
-        className={`h-2 w-2 shrink-0 rounded-full ${ready ? "bg-speech" : "bg-warn"}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${ready ? "bg-ink" : "border border-ink-soft"}`}
         aria-hidden="true"
       />
-      <span className="font-medium">{name}</span>
-      <span className="text-muted">{ready ? "ready" : "unavailable"}</span>
+      <span className="font-semibold">{name}</span>
+      <span className={ready ? "text-ink-soft" : "font-medium text-accent-ink"}>
+        {ready ? "ready" : "unavailable"}
+      </span>
     </p>
   );
 }

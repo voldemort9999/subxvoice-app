@@ -13,18 +13,18 @@ export function PermissionList() {
   const statuses = usePermissions() ?? [];
 
   return (
-    <ul className="divide-y divide-line rounded-lg border border-line">
+    <ul className="divide-y divide-rule border-y border-rule">
       {statuses.map(({ kind, state }) => (
-        <li key={kind} className="flex items-center justify-between gap-4 px-4 py-3">
+        <li key={kind} className="flex items-center justify-between gap-4 py-3">
           <div>
-            <p className="font-medium">{LABELS[kind].title}</p>
-            <p className="text-muted">{LABELS[kind].why}</p>
+            <p className="font-semibold">{LABELS[kind].title}</p>
+            <p className="text-ink-soft">{LABELS[kind].why}</p>
           </div>
-          {state === "granted" && <span className="text-muted">Allowed</span>}
+          {state === "granted" && <span className="text-ink-soft">Allowed</span>}
           {state === "unknown" && (
             <button
               type="button"
-              className="shrink-0 text-accent hover:underline"
+              className="shrink-0 font-medium text-ink-soft underline decoration-rule-strong underline-offset-[3px] hover:text-ink"
               onClick={() => window.subx.permissions.openSettings(kind)}
             >
               Check in Settings
@@ -33,7 +33,7 @@ export function PermissionList() {
           {(state === "denied" || state === "not_asked") && (
             <button
               type="button"
-              className="shrink-0 rounded-lg bg-accent px-3 py-1.5 font-medium text-accent-ink hover:opacity-90"
+              className="shrink-0 rounded-[3px] bg-marigold px-3.5 py-1.5 font-semibold text-on-marigold transition-colors hover:bg-ink hover:text-page"
               onClick={() =>
                 state === "not_asked"
                   ? window.subx.permissions.request(kind)

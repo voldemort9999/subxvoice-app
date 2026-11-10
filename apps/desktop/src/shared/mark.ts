@@ -1,5 +1,5 @@
 /**
- * The app mark: five waveform bars, the same glyph the sidebar draws.
+ * The app mark: five waveform bars, the same glyph the sidebar draws (`renderer/src/shared/Mark.tsx`).
  *
  * Geometry and rasterising live here, with no Electron import, so the icon the installer ships
  * and the icon the running app draws come from one definition. `main/brand.ts` wraps this for
@@ -8,9 +8,9 @@
  */
 
 /** Bar heights as a fraction of the box, measured from the centre out. */
-const BARS = [0.18, 0.46, 0.76, 0.38, 0.18];
-const BAR_WIDTH = 0.085;
-const BAR_GAP = 0.055;
+export const BARS = [0.18, 0.46, 0.76, 0.38, 0.18];
+export const BAR_WIDTH = 0.085;
+export const BAR_GAP = 0.055;
 const SUPERSAMPLE = 3;
 
 /** Deep Aubergine — the plate. */
@@ -20,7 +20,7 @@ export const BAR = { r: 0xdd, g: 0xe3, b: 0xe8 };
 /** Marigold — the tallest bar only, so the mark carries all three colours at 16px. */
 export const PEAK = { r: 0xea, g: 0xaa, b: 0x00 };
 /** The tallest bar's index, which is the one that gets the accent. */
-const PEAK_BAR = BARS.indexOf(Math.max(...BARS));
+export const PEAK_BAR = BARS.indexOf(Math.max(...BARS));
 
 /** Inside a bar, or inside the rounded square behind them. */
 function shape(x: number, y: number): { bar: boolean; peak: boolean; plate: boolean } {
@@ -61,7 +61,7 @@ function shape(x: number, y: number): { bar: boolean; peak: boolean; plate: bool
 }
 
 export interface MarkOptions {
-  /** The violet plate behind the bars. A tray icon wants the bars alone. */
+  /** The Aubergine plate behind the bars. The Mac menu bar wants the bars alone. */
   plate: boolean;
   /** Grey level of the bars when there is no plate; the tray uses it to sit on light or dark. */
   shade?: number;
