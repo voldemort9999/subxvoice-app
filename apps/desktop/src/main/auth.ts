@@ -16,6 +16,8 @@ const SUPABASE_ANON_KEY =
 
 export const STT_URL = `${SUPABASE_URL.replace("https://", "wss://")}/functions/v1/stt`;
 export const LLM_URL = `${SUPABASE_URL}/functions/v1/llm`;
+/** Same function, different upstream: Jev is a decisions model and refuses the chat endpoint. */
+export const DECISIONS_URL = `${LLM_URL}/decisions`;
 const USAGE_URL = `${SUPABASE_URL}/functions/v1/usage`;
 
 /** Dictation time used today, and what is left of the daily allowance. */

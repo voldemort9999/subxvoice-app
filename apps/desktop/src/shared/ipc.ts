@@ -7,6 +7,7 @@ import type {
   PermissionState,
   ScriptPreference,
   SessionRecord,
+  WritingTone,
 } from "@subx/core";
 
 export const IPC = {
@@ -75,6 +76,11 @@ export interface AppSettings {
   microphoneId: string;
   /** Start SUBXVoice when the user signs in to the computer. */
   launchAtLogin: boolean;
+  /** How a composed email reads. Chosen during setup, changeable in Settings. */
+  emailTone: WritingTone;
+  /** How a composed chat message reads. Separate from email: most people write formal mail and
+   * casual chat. */
+  messageTone: WritingTone;
 }
 
 /** Dictation time used today, and what is left of the daily allowance. */

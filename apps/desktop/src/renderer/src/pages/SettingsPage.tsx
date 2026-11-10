@@ -1,10 +1,12 @@
 import { HotkeyNote, MicrophoneNote, PermissionsIntro } from "@platform/Chrome";
+import type { WritingTone } from "@subx/core";
 import type { AppInfo, UpdateState } from "../../../shared/ipc";
 import { hotkeyLabel } from "../shared/format";
 import { HotkeyRecorder } from "../shared/HotkeyRecorder";
 import { useAccount, useMicrophones, useSettings, useUpdate } from "../shared/hooks";
 import { FolderIcon } from "../shared/icons";
 import { PermissionList } from "../shared/PermissionList";
+import { TONE_OPTIONS } from "../shared/tones";
 import { Button, Card, Field, Select, Toggle } from "../shared/ui";
 
 const SCRIPTS = [
@@ -103,6 +105,38 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
             onChange={(checked) => update({ launchAtLogin: checked })}
           />
         </Field>
+      </Card>
+
+      <Card title="Writing">
+        <p className="mb-4 max-w-xl text-muted">
+          Ask out loud for an email or a message — “write a mail to my manager about tomorrow's leave” — and
+          SUBXVoice writes it instead of typing what you said. Everything else is dictated exactly as spoken.
+        </p>
+        <Field
+          label="Email tone"
+          hint="Used when you ask for an email. Emails are always written in English, whatever language you asked in."
+        >
+          <Select
+            label="Email tone"
+            value={settings?.emailTone ?? "professional"}
+            onChange={(value) => update({ emailTone: value as WritingTone })}
+            options={TONE_OPTIONS.map((tone) => ({ value: tone.value, label: tone.label }))}
+          />
+        </Field>
+        <Field
+          label="Message tone"
+          hint="Used for WhatsApp, SMS and chat replies. Messages stay in the language you spoke."
+        >
+          <Select
+            label="Message tone"
+            value={settings?.messageTone ?? "casual"}
+            onChange={(value) => update({ messageTone: value as WritingTone })}
+            options={TONE_OPTIONS.map((tone) => ({ value: tone.value, label: tone.label }))}
+          />
+        </Field>
+        <p className="mt-1 text-xs text-faint">
+          {TONE_OPTIONS.map((tone) => `${tone.label} — ${tone.hint}`).join("   ·   ")}
+        </p>
       </Card>
 
       <Card title="Permissions">

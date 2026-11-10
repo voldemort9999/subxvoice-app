@@ -7,7 +7,7 @@
 // The controller above it only knows about the hotkey, the pill and the microphone; the pipeline
 // below it only knows about plug-point interfaces. Everything app-specific — which settings apply,
 // what the pill says, where the audio file goes, what a failure reads like — lives here.
-import type { AppContext, AudioClip, ContextReader, Mode, Pipeline, SessionRecord } from "@subx/core";
+import type { AppContext, AudioClip, ContextReader, Intent, Mode, Pipeline, SessionRecord } from "@subx/core";
 import type { AppSettings } from "../shared/ipc";
 import type { DictationEngine, DictationRun } from "./dictation";
 
@@ -26,6 +26,10 @@ export interface WorkflowDeps {
   newId(): string;
   /** Raw words as heard, shown while the model is still formatting them. */
   onHeard(text: string): void;
+  /** The signed-in account's display name, used to sign off a composed email. */
+  userName?(): Promise<string | undefined>;
+  /** Fired once the intent is known, so the pill can say what it is doing. */
+  onIntent?(intent: Intent): void;
   onHistoryChanged(): void;
   /** Whether an account is signed in. Dictation runs on its session, so without one it refuses. */
   signedIn?(): Promise<boolean>;
@@ -59,6 +63,10 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
         session = await deps.pipeline.open(mode, context, {
           script: settings.script,
           onTranscript: deps.onHeard,
+          emailTone: settings.emailTone,
+          messageTone: settings.messageTone,
+          userName: await deps.userName?.().catch(() => undefined),
+          onIntent: deps.onIntent,
         });
       } catch (error) {
         // The backend refuses an exhausted account before the upgrade, which reaches the app as a

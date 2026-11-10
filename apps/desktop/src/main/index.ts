@@ -8,6 +8,7 @@ import {
   type PermissionKind,
   Pipeline,
   SubxError,
+  type WritingTone,
 } from "@subx/core";
 import { app, BrowserWindow, ipcMain, Menu, shell, type Tray } from "electron";
 import {
@@ -183,6 +184,9 @@ function assertDictionaryEntry(value: unknown): DictionaryEntry {
   };
 }
 
+const isTone = (value: unknown): value is WritingTone =>
+  value === "professional" || value === "formal" || value === "casual";
+
 /** Settings arrive from the renderer, so every field is checked before it is stored. */
 function assertSettings(value: unknown, accepts: (keys: string) => boolean): Partial<AppSettings> {
   const input = (value ?? {}) as Partial<AppSettings>;
@@ -193,6 +197,8 @@ function assertSettings(value: unknown, accepts: (keys: string) => boolean): Par
   }
   if (input.script === "native" || input.script === "roman") patch.script = input.script;
   if (typeof input.launchAtLogin === "boolean") patch.launchAtLogin = input.launchAtLogin;
+  if (isTone(input.emailTone)) patch.emailTone = input.emailTone;
+  if (isTone(input.messageTone)) patch.messageTone = input.messageTone;
   if (typeof input.microphoneId === "string" && input.microphoneId.length <= 200) {
     patch.microphoneId = input.microphoneId;
   }
@@ -231,6 +237,8 @@ async function start(): Promise<void> {
     script: "roman",
     microphoneId: "",
     launchAtLogin: false,
+    emailTone: "professional",
+    messageTone: "casual",
   });
 
   /**
@@ -331,6 +339,7 @@ async function start(): Promise<void> {
     ? new Pipeline({
         stt: engines.stt,
         llm: engines.llm,
+        decider: engines.decider,
         inserter: platform.inserter,
         history,
         dictionary,
@@ -351,6 +360,13 @@ async function start(): Promise<void> {
       // Show the words as heard while the model is still cleaning them up.
       onHeard: (text) => pill.setState({ kind: "processing", message: text }),
       signedIn: async () => (await account.state()).signedIn,
+      userName: async () => (await account.state()).name || undefined,
+      // "Writing an email…" is a very different wait from "formatting what you said".
+      onIntent: (intent) => {
+        if (intent !== "dictation") {
+          pill.setState({ kind: "processing", message: `Writing your ${intent}…` });
+        }
+      },
       remainingSeconds: async () => (await account.usage())?.remaining ?? null,
       onHistoryChanged: notifyHistoryChanged,
       log: (line) => console.log(line),

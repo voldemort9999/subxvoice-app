@@ -7,7 +7,16 @@ export {
   type PipelineDeps,
   type ProcessOptions,
 } from "./pipeline";
-export { needsTransliteration, styleRewritePrompt, transliteratePrompt } from "./prompts";
+export {
+  type ComposeOptions,
+  emailPrompt,
+  INTENT_CRITERIA,
+  INTENT_QUESTION,
+  messagePrompt,
+  needsTransliteration,
+  styleRewritePrompt,
+  transliteratePrompt,
+} from "./prompts";
 export { type CommandTrigger, DEFAULT_TRIGGERS, type Route, Router } from "./router";
 export { applyDictionary, applyRules, normalizeSpacing } from "./rules";
 export { ToolRegistry } from "./tools";

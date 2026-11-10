@@ -39,6 +39,8 @@ function build(opts: {
         script: opts.script ?? "roman",
         microphoneId: "",
         launchAtLogin: false,
+        emailTone: "professional",
+        messageTone: "casual",
       }),
     },
     context: { current: async () => ({ appName: "Notes" }) },

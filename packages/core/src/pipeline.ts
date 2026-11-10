@@ -1,17 +1,53 @@
+import type { DeciderProvider } from "./contracts/decider";
 import type { LlmProvider } from "./contracts/llm";
 import type { TextInserter } from "./contracts/platform";
 import type { DictionaryStore, HistoryStore } from "./contracts/store";
 import type { SttProvider, Transcript } from "./contracts/stt";
 import { SubxError } from "./errors";
-import { needsTransliteration, styleRewritePrompt, transliteratePrompt } from "./prompts";
+import {
+  emailPrompt,
+  INTENT_CRITERIA,
+  INTENT_QUESTION,
+  messagePrompt,
+  needsTransliteration,
+  styleRewritePrompt,
+  transliteratePrompt,
+} from "./prompts";
 import { Router } from "./router";
 import { applyRules } from "./rules";
-import type { AppContext, AudioClip, Mode, ScriptPreference, SessionRecord } from "./types";
+import type {
+  AppContext,
+  AudioClip,
+  Intent,
+  Mode,
+  ScriptPreference,
+  SessionRecord,
+  WritingTone,
+} from "./types";
+
+/**
+ * How sure the classifier must be before the user's own words are replaced by something written
+ * for them. Set high on purpose: a missed "write an email" costs one retry, while a wrongly
+ * composed email throws the dictation away and pastes an invention in its place.
+ */
+const INTENT_CONFIDENCE = 0.7;
+
+/**
+ * Trigger phrases are a stated intent, so they skip the classifier entirely — no round trip, no
+ * threshold, no chance of being second-guessed. Anything the router does not recognise still goes
+ * to the model.
+ */
+const TRIGGER_INTENT: Record<string, Intent> = {
+  email: "email",
+  slack_message: "message",
+};
 
 export interface PipelineDeps {
   stt: SttProvider;
   /** Needed for style mode only. */
   llm?: LlmProvider;
+  /** Classifies dictation vs. "write me an email/message". Without it, only trigger phrases route. */
+  decider?: DeciderProvider;
   inserter: TextInserter;
   history: HistoryStore;
   dictionary: DictionaryStore;
@@ -29,6 +65,14 @@ export interface ProcessOptions {
   script?: ScriptPreference;
   /** Shown while the LLM is still working, so the pill can display the raw words first. */
   onTranscript?: (text: string) => void;
+  /** Tone for a composed email, from settings. */
+  emailTone?: WritingTone;
+  /** Tone for a composed chat message, from settings. */
+  messageTone?: WritingTone;
+  /** Signed off with, when the account has one. */
+  userName?: string;
+  /** Told as soon as the intent is known, so the pill can say "Writing an email…". */
+  onIntent?: (intent: Intent) => void;
 }
 
 /**
@@ -115,12 +159,24 @@ export class Pipeline {
     options.onTranscript?.(text);
 
     const route = this.router.route(text, mode);
-    if (route.kind === "command") {
+    const triggered = route.kind === "command" ? TRIGGER_INTENT[route.command] : undefined;
+    // A command with no intent of its own is something else entirely — a custom trigger someone
+    // added — and is handed back for the app to deal with.
+    if (route.kind === "command" && !triggered) {
       return { kind: "command", command: route.command, rest: route.rest, context };
     }
 
-    // At most one LLM call: style mode folds the script rule into its own prompt.
-    const rewritten = await this.finalise(text, context, script, route.mode);
+    // The whole sentence goes to the writer, not route.rest: "to my manager about tomorrow's
+    // leave" loses who it is for once the trigger is stripped.
+    const intent = triggered ?? (await this.classify(text));
+    options.onIntent?.(intent);
+
+    // Composing replaces the user's words; dictating only rewrites their script. Either way one
+    // model call, and either way a failure falls back to what was actually heard.
+    const rewritten =
+      intent === "dictation"
+        ? await this.finalise(text, context, script, mode)
+        : await this.compose(text, intent, script, options);
     const finalText = rewritten.text;
     const llmMs = clock.lap();
 
@@ -136,7 +192,8 @@ export class Pipeline {
     const record: SessionRecord = {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
-      mode: route.mode,
+      mode: mode,
+      intent,
       context,
       rawText: transcript.text,
       finalText,
@@ -145,6 +202,59 @@ export class Pipeline {
     };
     await this.deps.history.save(record);
     return pasteError ? { kind: "inserted", record, pasteError } : { kind: "inserted", record };
+  }
+
+  /**
+   * What the speaker wanted: their words typed, or an email or message written for them.
+   *
+   * Falls back to plain dictation on anything unexpected — no classifier, a low-confidence
+   * answer, or a failed call. That bias is deliberate: typing what someone said is never the
+   * wrong thing to do, while composing when they did not ask for it destroys their dictation.
+   */
+  private async classify(text: string): Promise<Intent> {
+    if (!this.deps.decider) return "dictation";
+    try {
+      const decision = await this.deps.decider.decide({
+        state: [text],
+        criteria: INTENT_CRITERIA,
+        instructions: INTENT_QUESTION,
+      });
+      if (decision.confidence < INTENT_CONFIDENCE) return "dictation";
+      return decision.choice as Intent;
+    } catch {
+      return "dictation";
+    }
+  }
+
+  /** Writes the email or message the speaker described, instead of typing what they said. */
+  private async compose(
+    text: string,
+    intent: Exclude<Intent, "dictation">,
+    script: ScriptPreference,
+    options: ProcessOptions,
+  ): Promise<{ text: string; error?: string }> {
+    if (!this.deps.llm) {
+      return { text, error: "Writing is unavailable, so the words went in as heard." };
+    }
+    const tone = (intent === "email" ? options.emailTone : options.messageTone) ?? "professional";
+    const system =
+      intent === "email"
+        ? emailPrompt({ tone, userName: options.userName })
+        : messagePrompt({ tone, userName: options.userName }, script);
+    try {
+      const response = await this.deps.llm.complete({
+        system,
+        messages: [{ role: "user", content: text }],
+        // Composing produces more than it is given, unlike transliteration.
+        maxTokens: 2000,
+      });
+      const written = response.text.trim();
+      if (!written) return { text, error: "Writing came back empty, so the words went in as heard." };
+      return { text: written };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { text, error: `Writing failed (${reason}), so the words went in as heard.` };
+    }
   }
 
   /**

@@ -3,7 +3,10 @@
 //
 // Auth is the platform's: deployed with JWT verification on, so the handler only runs for a
 // request carrying a valid Supabase session.
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+// Jev is a "decisions model": it refuses the chat endpoint outright and answers typed questions
+// here instead. Same key, same session check — only the upstream path differs.
+const DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions";
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") {
@@ -14,8 +17,10 @@ Deno.serve(async (request) => {
   if (!apiKey) return new Response("Rewriting is not configured.", { status: 503 });
 
   const body = await request.text();
+  // The app posts to /llm for chat and /llm/decisions for a classification.
+  const upstream_url = new URL(request.url).pathname.endsWith("/decisions") ? DECISIONS_URL : CHAT_URL;
 
-  const upstream = await fetch(OPENROUTER_URL, {
+  const upstream = await fetch(upstream_url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

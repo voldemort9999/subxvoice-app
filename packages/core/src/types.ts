@@ -14,6 +14,19 @@ export type Mode = "exact" | "style";
  */
 export type ScriptPreference = "native" | "roman";
 
+/**
+ * What the speaker actually wanted out of this dictation.
+ *
+ * "dictation" is the default and the overwhelming majority: type what I said. The other two mean
+ * the words were an instruction — write me an email, write me a message — and the text that gets
+ * pasted is composed rather than transcribed.
+ */
+export type Intent = "dictation" | "email" | "message";
+
+/** How a composed email or message should read. Set per kind, because most people write formal
+ * email and casual chat. */
+export type WritingTone = "professional" | "formal" | "casual";
+
 /** What the user is looking at while speaking. Every field is optional — OS support varies. */
 export interface AppContext {
   appName?: string;
@@ -43,6 +56,8 @@ export interface SessionRecord {
   id: string;
   createdAt: number;
   mode: Mode;
+  /** Absent on records written before composing existed; treat as "dictation". */
+  intent?: Intent;
   context: AppContext;
   rawText: string;
   finalText: string;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { DeciderProvider } from "./contracts/decider";
 import { FakeInserter, FakeLlm, FakeStt, MemoryDictionary, MemoryHistory } from "./fakes";
 import { Pipeline } from "./pipeline";
+import { Router } from "./router";
 
 const audio = { samples: new Int16Array(16000), sampleRate: 16000 };
 
@@ -97,12 +99,19 @@ describe("Pipeline", () => {
     expect(history.records[0]?.rewriteError).toMatch(/original script/i);
   });
 
-  it("commands are returned to the caller, not typed", async () => {
-    const { pipeline, inserter } = setup("write a mail to the professor about the deadline");
+  it("a command with no intent of its own is handed back, not typed", async () => {
+    const inserter = new FakeInserter();
+    const pipeline = new Pipeline({
+      stt: new FakeStt("open spotify and play something"),
+      inserter,
+      history: new MemoryHistory(),
+      dictionary: new MemoryDictionary([]),
+      router: new Router([{ command: "open_app", phrases: ["open spotify"] }]),
+    });
 
     const outcome = await pipeline.process(audio, "exact", {});
 
-    expect(outcome).toMatchObject({ kind: "command", command: "email" });
+    expect(outcome).toMatchObject({ kind: "command", command: "open_app" });
     expect(inserter.inserted).toEqual([]);
   });
 
@@ -246,5 +255,76 @@ describe("Pipeline", () => {
       expect(inserter.inserted).toEqual(["streamed words"]);
       expect(batchUsed).toBe(false); // transcribe() was never touched
     });
+  });
+});
+
+/**
+ * Composing is the one path that throws the user's own words away and pastes something invented
+ * in their place. Every test here is about when that is allowed to happen.
+ */
+describe("Pipeline intent", () => {
+  const decider = (choice: string, confidence: number): DeciderProvider => ({
+    id: "fake",
+    decide: async () => ({ choice, confidence }),
+  });
+
+  function composing(spoken: string, written: string, intent: DeciderProvider | undefined) {
+    const inserter = new FakeInserter();
+    const history = new MemoryHistory();
+    const pipeline = new Pipeline({
+      stt: new FakeStt(spoken),
+      llm: new FakeLlm(written),
+      decider: intent,
+      inserter,
+      history,
+      dictionary: new MemoryDictionary([]),
+    });
+    return { pipeline, inserter, history };
+  }
+
+  /** Asks for an email without any trigger phrase, so only the classifier can notice. */
+  const ASK = "mujhe apne manager ko kal ki chhutti ke baare mein likhna hai";
+  /** The literal trigger phrase, which skips the classifier entirely. */
+  const TRIGGERED = "write an email to my manager about tomorrow's leave";
+
+  it("composes when the classifier is confident", async () => {
+    const { pipeline, inserter, history } = composing(ASK, "Subject: Leave\n\nHi,", decider("email", 0.95));
+    await pipeline.process(audio, "exact", {});
+    expect(inserter.inserted).toEqual(["Subject: Leave\n\nHi,"]);
+    expect(history.records[0]?.intent).toBe("email");
+  });
+
+  it("types what was said when the classifier is unsure", async () => {
+    // Below the threshold the user's words win, because composing by mistake destroys them.
+    const { pipeline, inserter, history } = composing(ASK, "an invented email", decider("email", 0.4));
+    await pipeline.process(audio, "exact", {});
+    expect(inserter.inserted).toEqual([ASK]);
+    expect(history.records[0]?.intent).toBe("dictation");
+  });
+
+  it("types what was said when the classifier fails", async () => {
+    const broken: DeciderProvider = {
+      id: "broken",
+      decide: async () => {
+        throw new Error("decisions endpoint down");
+      },
+    };
+    const { pipeline, inserter } = composing(ASK, "an invented email", broken);
+    await pipeline.process(audio, "exact", {});
+    expect(inserter.inserted).toEqual([ASK]);
+  });
+
+  it("types what was said when there is no classifier at all", async () => {
+    const { pipeline, inserter, history } = composing(ASK, "an invented email", undefined);
+    await pipeline.process(audio, "exact", {});
+    expect(inserter.inserted).toEqual([ASK]);
+    expect(history.records[0]?.intent).toBe("dictation");
+  });
+
+  it("keeps the spoken words when composing comes back empty, and says why", async () => {
+    const { pipeline, inserter, history } = composing(ASK, "   ", decider("email", 1));
+    await pipeline.process(audio, "exact", {});
+    expect(inserter.inserted).toEqual([ASK]);
+    expect(history.records[0]?.rewriteError).toMatch(/went in as heard/);
   });
 });

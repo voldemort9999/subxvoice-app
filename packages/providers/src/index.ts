@@ -1,5 +1,6 @@
-import { type LlmProvider, type SttProvider, SubxError } from "@subx/core";
+import { type DeciderProvider, type LlmProvider, type SttProvider, SubxError } from "@subx/core";
 import { FakeLlm, FakeStt } from "@subx/core/fakes";
+import { JevDecider } from "./decider/jev";
 import { OpenRouterLlm } from "./llm/openrouter";
 import { type GnaniFormat, type GnaniLanguage, GnaniStt, type TokenSource } from "./stt/gnani";
 
@@ -84,3 +85,17 @@ export {
   type TokenSource,
   toLocale,
 } from "./stt/gnani";
+
+/** The intent classifier. Separate from createLlm because a decisions model is not a chat model. */
+export function createDecider(config: ProviderConfig): DeciderProvider {
+  switch (config.id) {
+    case "jev":
+      return new JevDecider({
+        token: requireToken(config, "Jev"),
+        model: config.model,
+        baseUrl: config.baseUrl,
+      });
+    default:
+      throw new SubxError("unsupported", `Unknown decider provider: ${config.id}`);
+  }
+}

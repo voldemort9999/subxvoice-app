@@ -6,15 +6,17 @@
 // expires while the app is open.
 
 import { join } from "node:path";
-import type { LlmProvider, SttProvider } from "@subx/core";
-import { createLlm, createStt, isGnaniFormat, isGnaniLanguage } from "@subx/providers";
+import type { DeciderProvider, LlmProvider, SttProvider } from "@subx/core";
+import { createDecider, createLlm, createStt, isGnaniFormat, isGnaniLanguage } from "@subx/providers";
 import { app } from "electron";
 import type { Account } from "./auth";
-import { LLM_URL, STT_URL } from "./auth";
+import { DECISIONS_URL, LLM_URL, STT_URL } from "./auth";
 
 export interface Engines {
   stt?: SttProvider;
   llm?: LlmProvider;
+  /** Decides dictation vs. "write me an email". Absent means only trigger phrases route. */
+  decider?: DeciderProvider;
   /** Why an engine is missing, shown in Settings. */
   problems: string[];
 }
@@ -46,6 +48,7 @@ export function createEngines(account: Account): Engines {
   const problems: string[] = [];
   let stt: SttProvider | undefined;
   let llm: LlmProvider | undefined;
+  let decider: DeciderProvider | undefined;
 
   // Read per dictation. An empty string means nobody is signed in, and the backend will say so.
   const token = () => account.token();
@@ -94,7 +97,15 @@ export function createEngines(account: Account): Engines {
     problems.push(describe("Rewriting", error));
   }
 
-  return { stt, llm, problems };
+  try {
+    decider = createDecider({ id: "jev", token, baseUrl: DECISIONS_URL, model: fromEnv("JEV_MODEL") });
+  } catch (error) {
+    // Not fatal, and deliberately not in `problems`: without it every dictation is simply typed
+    // out, which is the behaviour the app had before composing existed.
+    console.error("Intent classifier unavailable:", error);
+  }
+
+  return { stt, llm, decider, problems };
 }
 
 const describe = (what: string, error: unknown) =>
