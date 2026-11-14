@@ -20,7 +20,6 @@ export function SignInPage() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [created, setCreated] = useState(false);
 
   // Caught here rather than at the server, which only ever sees one of the two.
   const mismatch = mode === "up" && confirm.length > 0 && password !== confirm;
@@ -28,7 +27,6 @@ export function SignInPage() {
   function switchTo(next: "in" | "up") {
     setMode(next);
     setProblem(null);
-    setCreated(false);
     setConfirm("");
   }
 
@@ -41,18 +39,9 @@ export function SignInPage() {
     setBusy(true);
     setProblem(null);
     try {
-      if (mode === "up") {
-        await window.subx.auth.signUp(email, password);
-        // Signing up deliberately does not sign you in: the first thing you do with the password
-        // you just chose is use it.
-        setMode("in");
-        setCreated(true);
-        setPassword("");
-        setConfirm("");
-      } else {
-        await window.subx.auth.signIn(email, password);
-        // The window swaps itself out when the account state changes; nothing to do here.
-      }
+      // Either way the window swaps itself out when the account state changes; nothing to do here.
+      if (mode === "up") await window.subx.auth.signUp(email, password);
+      else await window.subx.auth.signIn(email, password);
     } catch (error) {
       setProblem(readable(error));
     } finally {
@@ -124,7 +113,6 @@ export function SignInPage() {
           </label>
         )}
 
-        {created && <Notice>Account created. Sign in with it now.</Notice>}
         {problem && <Notice role="alert">{problem}</Notice>}
 
         <Button type="submit" variant="primary" disabled={busy || mismatch} className="w-full py-2.5">
@@ -151,7 +139,12 @@ export function SignInPage() {
 /** Supabase phrases some failures for developers; these are the ones users actually hit. */
 function readable(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (/invalid login credentials/i.test(message)) return "That email and password don't match.";
+  // The server gives the same answer for a wrong password and for an email with no account, and
+  // a first-time user is far more often the second. So the message names both possibilities.
+  if (/invalid login credentials/i.test(message)) {
+    return "No account matches that email and password. Check both, or create an account below.";
+  }
+  if (/email not confirmed/i.test(message)) return "Confirm your email first, then sign in.";
   if (/already registered|already been registered/i.test(message)) {
     return "That email already has an account. Sign in instead.";
   }

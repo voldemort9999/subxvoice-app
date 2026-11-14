@@ -2,6 +2,14 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-14 — Creating an account signs you in
+Sign-up used to sign straight back out and return the user to the sign-in form, so that they
+would use the new password at once. New users read the bounce as a failed sign-up, typed their
+details into the sign-in form for an account that had never been created, and were told the email
+and password "don't match". Supabase gives the same "Invalid login credentials" for a missing
+account as for a wrong password. So sign-up now keeps the session and goes straight to onboarding,
+and the sign-in error names both possibilities and points to "Create one".
+
 ### 2026-11-14 — Command mode is called "Follow My Words", and it leads the product
 The user chose the name (from fifteen offered) and the positioning: SUBXVoice is presented as a
 helper you talk to while you work — voice typing taken further — not as a dictation app with an

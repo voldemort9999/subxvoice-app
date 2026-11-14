@@ -73,14 +73,18 @@ export class Account {
   }
 
   /**
-   * Creating an account does not sign you in: the user is sent back to the sign-in form, so the
-   * password they just chose is the one they immediately use.
+   * Creating an account signs you in. It used to sign straight back out and send the user to the
+   * sign-in form, and new users read that bounce as "nothing happened". Then they typed their
+   * details into the sign-in form, for an account that did not exist, and were told the email and
+   * password "don't match".
    */
   async signUp(email: string, password: string): Promise<void> {
-    const { error } = await this.client.auth.signUp({ email, password });
+    const { data, error } = await this.client.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
-    await this.client.auth.signOut();
-    await this.forget();
+    // The project confirms new accounts automatically, so a session normally comes back with the
+    // user. If email confirmation is ever turned on, this sign-in surfaces "Email not confirmed"
+    // instead of failing silently.
+    if (!data.session) await this.signIn(email, password);
   }
 
   async signIn(email: string, password: string): Promise<void> {
