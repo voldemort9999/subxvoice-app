@@ -405,3 +405,34 @@ Open:
 - Second opinion acted on `open_folder` for "resume ChatGPT pe upload kar" (Jev's top was
   nothing_fits 0.44): it opened Pictures and said done. Not changed.
 - Image fallback, commit, 0.4.0 release before ~2026-11-15: still the user's call.
+
+### 0.4.0 released (2026-11-14, same session)
+
+Asked:
+> achhe se proper tareeke se EXE bana do … koi bhi us EXE ko chahe download kare, permissions maange bhi … pehle installation ke waqt achhe se poori permissions maang le … site pe bhi laga do … Update push kar do
+
+Done:
+- `apps/desktop/package.json` 0.3.0 → 0.4.0. `dist:win` first (no publish), then the packaged
+  `dist/win-unpacked/SUBXVoice.exe` was smoke-tested: started, updater checked GitHub, and two
+  commands run inside it through the inspector (scratchpad `grab.mjs` + `run-command.mjs`, which
+  call the workflow's own `command`): "volume kitna hai aur battery kitni hai" → system status;
+  "WhatsApp mein kya open hai" → `screen_read` → "Haan, WhatsApp logged in hai." So the PowerShell
+  worker, the C# blocks and both models work from the installed layout.
+- Secret scan of the change set (tokens, keys, the user's email): clean. `reference/` and `.env`
+  are ignored.
+- Commit `ab3949b` "feat: command mode … — 0.4.0" (41 paths) pushed to `subxvoice-app` `main`.
+- `pnpm --filter @subx/desktop release:win` → release `v0.4.0` on `subxvoice-releases`, not a
+  draft, with the exe (113,214,013 bytes), blockmap and `latest.yml` (version 0.4.0). The site's
+  link (`subxvoice-web/src/lib/download.ts`, `releases/latest/download/…`) now redirects to
+  v0.4.0; the website itself needed no change (it names no version).
+- Installed 0.4.0 on the dev machine from the built installer, launched through `explorer.exe`;
+  `SUBXVoice.exe` reports 0.4.0.0 and is running.
+
+User decided / not done:
+- The user asked for the installer to ask for "poori permissions" with Windows' Yes/No (UAC)
+  dialog. Not done: nothing in the app needs administrator rights; the installer is per-user
+  (`perMachine: false`), so a UAC prompt would mean a per-machine install, which would leave every
+  existing per-user install updating separately; and an elevated SUBXVoice cannot receive key
+  presses from normal apps (UIPI, `packages/platform-win/AGENTS.md`). The one permission that
+  matters, the microphone, is Windows' privacy switch, which the app checks
+  (`WinPermissions.status`) and opens Settings for. Told the user; their answer is pending.

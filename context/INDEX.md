@@ -7,20 +7,21 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-11-14 · after S-016 · `subxvoice-app` `main` at `5bc4e7f` **plus a large
-uncommitted change set (all of command mode, ~33 paths)** · website `main` at `6fdf2c4`. Current
+Last updated: 2026-11-14 · after S-016 · `subxvoice-app` `main` at `ab3949b` (command mode
+committed, **0.4.0 released**) · website `main` at `6fdf2c4`. Current
 journal file is **`002`** (407 lines; `001` closed at 992).
 
 ## Where things stand
 
-SUBXVoice **0.3.0** is released (2026-11-10) and is what the website's download button serves:
+SUBXVoice **0.4.0** is released (2026-11-14) — command mode included — and is what the website's
+download button serves and every install auto-updates to. 0.3.0 (2026-11-10) was dictation only:
 hold `Ctrl+Win`, speak Hindi/English/mixed, release, Roman Hinglish at the cursor — Gnani
 `prisma-v3.0` for speech, gpt-oss-120b (Groq) for the rewrite, Jev to tell dictation from "write me
 an email". Two hours per account per day. The demo video for Gnani AI's Great Indian AI Internship
 Challenge is rendered (`pillow/subxvoice-video/out/subxvoice-demo.mp4`); the deadline was extended
 to roughly **2026-11-15**.
 
-**Command mode is built and being tested by the user, still uncommitted.** Hold **`Ctrl+Alt`**, say
+**Command mode shipped in 0.4.0.** Hold **`Ctrl+Alt`**, say
 what to do; Gemini (`google/gemini-2.5-flash`) splits it into steps, Jev (`typesafe/jev-1.14`)
 picks an action per step, Gemini fills the details. Windows actions live in
 `packages/platform-win/src/commands.ts` on one long-lived PowerShell running C# (`interop.ts`):
@@ -72,8 +73,8 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
    image part (`packages/core/src/contracts/decider.ts`, `providers/src/decider/jev.ts`).
 3. Unlooked-at: "dictation: nothing heard" twice in `dev14.log`; a second opinion that ran
    `open_folder` for "resume ChatGPT pe upload kar" and said done (002 S-016 Open).
-4. Then commit (the user has not asked yet), and release 0.4.0 if the user wants command mode in
-   the installer before the deadline (`release:win` publishes; bump `apps/desktop/package.json`).
+4. Next release: bump `apps/desktop/package.json`, `dist:win` and smoke-test the packaged exe
+   (002 S-016), commit, push, `release:win`.
 
 ### Methods that work here
 
@@ -118,8 +119,8 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 
 - **Image fallback for apps with no tree (BlueStacks)** — the user asked for it on 2026-11-12 after
   deferring it on 11-11; probe results given, go-ahead not yet given. Costs ~$0.0003 a look.
-- **Ship command mode in 0.4.0 before ~2026-11-15?** Judges download from the site.
-- **Commit** — nothing from S-014/S-015 is committed; the user has not asked.
+- **UAC prompt in the installer?** The user asked for one; not done, reasons in 002 S-016
+  (per-user install, no admin needed, elevated app loses key presses). Waiting on their answer.
 - **Language picker** (0.3.0 fixed to hi-IN) — deferred by the user.
 - **Per-device quota, or leave account-hopping open?** Unanswered since S-010.
 - ~~Confirm risky actions~~ — no "pakka?" (S-015). ~~Send messages~~ — never, unless asked separately.
@@ -161,4 +162,4 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 | S-013 | 2026-11-10 | App redesign; favicon fix; 0.3.0 released | 001 |
 | S-014 | 2026-11-10 → 11-11 | Demo video; command mode researched, built, first test, loop rewritten | 002 |
 | S-015 | 2026-11-11 → 11-12 | All Windows actions; screen control (UIA3 + Jev); eight user tests; stuck pill root cause | 002 |
-| S-016 | 2026-11-14 | Invisible Explorer windows; Bluetooth devices; Roman retry; live suites | 002 |
+| S-016 | 2026-11-14 | Invisible Explorer windows; Bluetooth devices; Roman retry; live suites; **0.4.0 released** | 002 |
