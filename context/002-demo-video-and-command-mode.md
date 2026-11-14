@@ -436,3 +436,28 @@ User decided / not done:
   presses from normal apps (UIPI, `packages/platform-win/AGENTS.md`). The one permission that
   matters, the microphone, is Windows' privacy switch, which the app checks
   (`WinPermissions.status`) and opens Settings for. Told the user; their answer is pending.
+
+### After the release (2026-11-14, same session)
+
+Asked:
+> har tareke ka apna ye subxvoice hai naya purana sab ko force kill karo ek bar
+> jara naye wali exe ko downloads me copy maarna
+> EXE bhi check kar lena ki push ho gayi hai achhe se, like website pe … Aur website bhi updated hai kya?
+
+Done:
+- Force-killed every SUBXVoice: four `SUBXVoice.exe` processes of the installed 0.4.0
+  (`%LOCALAPPDATA%\Programs\@subxdesktop`); no dev `electron.exe` or port-5173 server was left; no
+  orphaned PowerShell worker (the two PowerShells running were VS Code's terminal and the agent's
+  own shell). Nothing SUBXVoice is running at the end of the session.
+- Copied `apps/desktop/dist/SUBXVoice-windows-setup.exe` to
+  `C:\Users\BHAVESH\Downloads\SUBXVoice-0.4.0-setup.exe` (113,214,013 bytes, hash equal to the
+  published file).
+- Re-verified: `releases/latest/download/latest.yml` says 0.4.0; the site's download URL
+  redirects to `releases/download/v0.4.0/SUBXVoice-windows-setup.exe` and serves 113,214,013
+  bytes; subxvoice.vercel.app answers 200 and carries that link. `subxvoice-web` is clean and level
+  with `origin/main` at `6fdf2c4` — the site needed no change for this release, since it names no
+  version and links to `latest`.
+
+Established:
+- The repo is fully committed: `subxvoice-app` `main` at `9fe35f6` (journal) on top of
+  `ab3949b` (0.4.0), nothing uncommitted.

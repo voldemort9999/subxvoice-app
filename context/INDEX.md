@@ -7,54 +7,48 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-11-14 · after S-016 · `subxvoice-app` `main` at `ab3949b` (command mode
-committed, **0.4.0 released**) · website `main` at `6fdf2c4`. Current
-journal file is **`002`** (407 lines; `001` closed at 992).
+Last updated: 2026-11-14 · after S-016 · `subxvoice-app` `main` at `9fe35f6` (0.4.0 is `ab3949b`),
+**nothing uncommitted** · website `main` at `6fdf2c4`, unchanged · current journal file **`002`**
+(463 lines; `001` closed at 992).
 
 ## Where things stand
 
-SUBXVoice **0.4.0** is released (2026-11-14) — command mode included — and is what the website's
-download button serves and every install auto-updates to. 0.3.0 (2026-11-10) was dictation only:
-hold `Ctrl+Win`, speak Hindi/English/mixed, release, Roman Hinglish at the cursor — Gnani
-`prisma-v3.0` for speech, gpt-oss-120b (Groq) for the rewrite, Jev to tell dictation from "write me
-an email". Two hours per account per day. The demo video for Gnani AI's Great Indian AI Internship
-Challenge is rendered (`pillow/subxvoice-video/out/subxvoice-demo.mp4`); the deadline was extended
-to roughly **2026-11-15**.
+**SUBXVoice 0.4.0 is released (2026-11-14) and live everywhere.** The release `v0.4.0` on
+`subxvoice-releases` carries the installer (113,214,013 bytes), its blockmap and `latest.yml`; the
+website's download button (`subxvoice-web/src/lib/download.ts`, a `releases/latest/download/` link)
+serves it; every 0.3.0 install auto-updates to it. The website needed no change — it names no
+version. On the dev machine 0.4.0 was installed from that installer, then every SUBXVoice process
+was force-killed at the user's request, so **nothing SUBXVoice is running**; a copy of the
+installer is at `C:\Users\BHAVESH\Downloads\SUBXVoice-0.4.0-setup.exe`.
 
-**Command mode shipped in 0.4.0.** Hold **`Ctrl+Alt`**, say
-what to do; Gemini (`google/gemini-2.5-flash`) splits it into steps, Jev (`typesafe/jev-1.14`)
-picks an action per step, Gemini fills the details. Windows actions live in
-`packages/platform-win/src/commands.ts` on one long-lived PowerShell running C# (`interop.ts`):
-apps, websites, volume, keys, windows, programs, files (find / show selected / copy / make folder),
-screenshot, brightness, radios, power, status. **Screen control** reads any app's accessibility tree
-through hand-declared UIA3 (`CmdUia`) and lets Jev pick the element: YouTube results ("chalao"
-plays the 1st), WhatsApp search and chats, Gmail rows, typing into a named box. WhatsApp messages
-are one fixed checked procedure and are **typed, never sent** unless the user separately says
-"ab send kar do". Everything is described in `docs/command-mode.md`.
+What 0.4.0 is. **Dictation** (since 0.1): hold `Ctrl+Win`, speak Hindi/English/mixed, release, and
+Roman Hinglish lands at the cursor — Gnani `prisma-v3.0` for speech, gpt-oss-120b (Groq) for the
+rewrite, Jev to tell dictation from "write me an email". New in 0.4.0, a Devanagari answer when
+Roman was asked for is retried once. **Command mode** (new): hold **`Ctrl+Alt`**, say what to do;
+Gemini (`google/gemini-2.5-flash`) plans steps, Jev (`typesafe/jev-1.14`) picks an action per step,
+Gemini fills its details. Windows actions are `packages/platform-win/src/commands.ts` on one
+long-lived PowerShell running C# (`interop.ts`): apps, websites, volume, keys, windows, programs,
+files, screenshot, brightness, radios, **Bluetooth devices** (connect paired earbuds), power,
+status. **Screen control** reads any app's accessibility tree through hand-declared UIA3 and lets
+Jev pick the element (YouTube results, WhatsApp chats, Gmail rows, a named box). WhatsApp messages
+are a fixed checked procedure — the open chat's box must name the person — and are **typed, never
+sent** unless the user separately says "ab send kar do". All of it: `docs/command-mode.md`. The
+pill-stuck-on-"•••" race and the Roman retry: `docs/architecture.md`.
 
-The user has run eight voice tests over 2026-11-11/12; each log drove fixes (S-015). The last
-three problems, all fixed on 2026-11-12 and **not yet re-tested by the user**:
-- WhatsApp cold after a reboot: steps now wait while a window is still loading, never for nothing.
-- "hi" went to "Yash arya" for "Aryan" (a stale list was clicked — my own regression): results are
-  now read until stable, and the message box's "Type a message to <name>" must match.
-- **The pill stuck on "•••" for good** — root cause found live in the running app: a tap's late
-  cancel cleared the next press's speech stream (`docs/architecture.md` → "One press at a time").
-  Fixed with a press number; `dictation.test.ts` reproduces it.
+How it got here. S-014/S-015 built command mode through eight voice tests by the user, each log
+driving fixes; S-016 fixed the last test's faults (folders that opened invisibly, Bluetooth
+devices, Roman, "quit" planned as killing), ran the live suites (Windows 12/12, end-to-end 22/24
+with both failures passing on rerun), smoke-tested the packaged exe from the inside, committed and
+released. **The user has not yet used 0.4.0 by voice after the S-016 fixes**; nothing is known to
+be broken.
 
-On 2026-11-14 (S-016) the user's retest went mostly right (WhatsApp to the right chat, files,
-brightness, radios). Fixed that day: "Opened Pictures" over **invisible** Explorer windows
-(`windowsHide`), **`bluetooth_device`** (connect/disconnect paired earbuds — live: OnePlus Buds 4
-in 6.2 s), a **Roman retry** for dictation answers left in Devanagari, "quit/band karo" planned as
-closing the window, and a 4 s look for a just-opened page's window. Live suites: Windows 12/12,
-end-to-end 22/24 with both failures passing on rerun. Not yet re-tested by the user.
-
-"Pictures" is misheard constantly among Hindi ("search folder", "features"); command-mode keyterms
-(`COMMAND_TERMS`) were added but are unmeasured. The user asked again for an **image fallback**
-(look at a screenshot only when the tree fails — would make BlueStacks possible); a probe showed
-Jev takes images through our backend cheaply but placed a click one grid cell off.
-
-The dev app runs from the scratchpad log `dev15.log`; the installed 0.3.0 must be closed for it
-(after a reboot it starts itself and takes the single-instance lock).
+Known weak spots, none blocking: "Pictures" is misheard among Hindi ("search folder", "features"),
+with `COMMAND_TERMS` keyterms added but unmeasured; the planner occasionally plans differently for
+the same sentence (BlueStacks Instance Manager once became a screen click); apps that draw their own
+screen (BlueStacks, games) have no tree, so screen control cannot act in them — the **image
+fallback** the user asked for would; a probe showed Jev takes screenshots through our backend for
+~$0.0003 but placed a click one grid cell off. The Gnani challenge deadline is ~**2026-11-15**; the
+demo video is `pillow/subxvoice-video/out/subxvoice-demo.mp4`.
 
 Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the app (private);
 `subxvoice` holds the website, working copy `pillow/subxvoice-web/` (private);
@@ -62,44 +56,49 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 
 ## Continue from here
 
-1. Ask the user how the retest went; read the dev log's `command:` / `agent:` / `screen:` /
-   `dictation:` lines. If the pill freezes again, do not restart: attach with
-   `node -e "process._debugProcess(<main pid>)"` and read the controller (method in 002 S-015
-   Part 3 — conditional breakpoint in `tick`, then `[[Scopes]]` of `onEvent`).
-2. If the user says yes to the image fallback: a screenshot of the target window (≤1,568 px a
-   side), a coarse numbered grid → Jev picks a cell → crop and a finer grid → Jev again → click only
-   above a floor; triggered only when `settled()` / a fixed procedure finds nothing. Start from
-   `reference/command-tests/grid.ps1` and `jev-image.mjs`; needs `DecisionRequest.state` to carry an
-   image part (`packages/core/src/contracts/decider.ts`, `providers/src/decider/jev.ts`).
-3. Unlooked-at: "dictation: nothing heard" twice in `dev14.log`; a second opinion that ran
-   `open_folder` for "resume ChatGPT pe upload kar" and said done (002 S-016 Open).
-4. Next release: bump `apps/desktop/package.json`, `dist:win` and smoke-test the packaged exe
-   (002 S-016), commit, push, `release:win`.
+1. Ask the user how 0.4.0 behaves in use. For a fault, run the dev app (method below; close the
+   installed app first — it holds the single-instance lock and starts itself after a reboot) and
+   read the log's `command:` / `agent:` / `screen:` / `dictation:` lines. If the pill freezes, do not
+   restart: attach the inspector and read the controller (002 S-015 Part 3).
+2. Waiting on the user: the image fallback (design in Open decisions) and the installer UAC prompt.
+3. Small, unlooked-at: "dictation: nothing heard" twice in the 2026-11-14 test log; a second
+   opinion that ran `open_folder` for "resume ChatGPT pe upload kar" and reported done.
+4. Next release: bump `apps/desktop/package.json`; `dist:win`; smoke-test `dist/win-unpacked`
+   (launch it, attach the inspector, run a command through the workflow's `command` — 002 S-016);
+   commit; push; `release:win`; check `latest.yml` and the site link.
 
 ### Methods that work here
 
-- **Restart the dev app** from PowerShell: stop `electron`, free port 5173,
-  `Remove-Item Env:ELECTRON_RUN_AS_NODE`, `Start-Process cmd.exe "/c cd /d … && pnpm dev:desktop >
-  <new log>" -WindowStyle Hidden`. A backgrounded Bash run dies with its task; `set X= &&` in cmd
-  leaves a space.
-- **Inspect the live main process**: `process._debugProcess(pid)` + CDP on 127.0.0.1:9229
-  (scratchpad `probe.mjs`, `grab.mjs`, `deps.mjs`).
-- **Live suites**: `LIVE=1` for `commands.live.test.ts`; `LIVE=1 SUBX_TOKEN=$(node
-  reference/command-tests/token.mjs apps/desktop/src/main/auth.ts)` for `command.live.test.ts`
-  (spends model calls); `LIVE_WHATSAPP=1` for `whatsapp.live.test.ts` (the user's own chat).
-- **Model tests**: `reference/command-tests/test3.mjs`; spend credits carefully.
+- **Dev app**, from PowerShell: stop `electron`, free port 5173,
+  `Remove-Item Env:ELECTRON_RUN_AS_NODE`, then
+  `Start-Process cmd.exe "/c cd /d <subxvoice> && pnpm dev:desktop > <new log>" -WindowStyle Hidden`.
+  A backgrounded Bash run dies with its task; cmd's `set X= &&` leaves a space; a still-locked old
+  log makes the redirect fail.
+- **Installed exe** from an agent shell: `explorer.exe <path>` (ELECTRON_RUN_AS_NODE leaks in).
+- **Inside a running main process** (dev or packaged): `node -e "process._debugProcess(<pid>)"`,
+  CDP on 127.0.0.1:9229; a never-pausing conditional breakpoint in the hotkey `tick` grabs the
+  poller, `[[Scopes]]` of its `onEvent` reach the `DictationController` and the workflow `deps`.
+  Scripts were in the session scratchpad (`grab.mjs`, `deps.mjs`, `run-command.mjs`) — rewrite
+  from 002 S-015/S-016 if gone.
+- **Live suites**: `LIVE=1` for `packages/platform-win/src/commands.live.test.ts`;
+  `LIVE=1 SUBX_TOKEN=$(node reference/command-tests/token.mjs apps/desktop/src/main/auth.ts)` for
+  `apps/desktop/src/main/command.live.test.ts` (spends model calls); `LIVE_WHATSAPP=1` for
+  `whatsapp.live.test.ts` (the user's own chat). `console.log` from a vitest probe is swallowed —
+  write to a file.
+- **Model tests**: `reference/command-tests/test3.mjs`; spend OpenRouter credits carefully.
 - **Long text / regexes**: the Write tool; never a Bash heredoc with quotes or backslashes.
 
 ## Topic → file
 
 | Topic | File |
 |---|---|
-| **Command mode: design, loop, screen control, waits, WhatsApp, files, images probe** | **`docs/command-mode.md`** |
-| Stuck "•••" pill: the press race and the watchdog | `docs/architecture.md`, 002 (S-015 Part 3) |
-| Command mode user tests 1–8: what failed and each fix | 002 (S-014 part 4, S-015) |
+| **Command mode: design, loop, screen control, waits, WhatsApp, files, Bluetooth, images probe** | **`docs/command-mode.md`** |
+| Stuck "•••" pill (press race, watchdog); Roman retry | `docs/architecture.md`, 002 (S-015 Part 3, S-016) |
+| The 0.4.0 release: smoke test, publish, verification, UAC question | 002 (S-016) |
+| Command mode user tests 1–9: what failed and each fix | 002 (S-014 part 4, S-015, S-016) |
+| Invisible Explorer windows (`windowsHide`), `CmdBluetooth` | `docs/command-mode.md`, 002 (S-016) |
 | UIA3 in C#, WhatsApp/YouTube tree facts, Jev element accuracy | `docs/command-mode.md`, 002 (S-015 Part 2) |
-| Live-debugging the Electron main process | 002 (S-015 Part 3) |
-| Bluetooth device connect (`CmdBluetooth`), invisible Explorer windows, Roman retry | `docs/command-mode.md`, `docs/architecture.md`, 002 (S-016) |
+| Live-debugging the Electron main process | 002 (S-015 Part 3, S-016) |
 | Jev with images (grid probe, limits, cost) | `docs/command-mode.md` → "Images", 002 (S-015) |
 | Research of the three Jev repos and Windows MCPs | 002 (S-014 part 2) |
 | Model comparison for the command writer | 002 (S-014 part 3), `docs/decisions.md` 2026-11-11 |
@@ -111,19 +110,24 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 | Website redesign | 001 (S-012) |
 | Composing (Jev intent, decisions endpoint, tones) | 001 (S-012), `docs/decisions.md` 2026-11-10 |
 | Pill/main window dying; `revive()`; single-instance lock | 001 (S-012) |
-| Auto-update, release pipeline, public releases repo | 001 (S-011, S-013), `docs/decisions.md` 2026-11-01 |
+| Auto-update, release pipeline, public releases repo | 001 (S-011, S-013), 002 (S-016), `docs/decisions.md` 2026-11-01 |
 | Gnani provider; Supabase backend; auth; daily limit | 001 (S-009, S-010) |
 | Streaming pipeline; Windows hotkey and paste; toolchain traps | 001 (S-001, S-002, S-011, S-012) |
 
 ## Open decisions
 
-- **Image fallback for apps with no tree (BlueStacks)** — the user asked for it on 2026-11-12 after
-  deferring it on 11-11; probe results given, go-ahead not yet given. Costs ~$0.0003 a look.
-- **UAC prompt in the installer?** The user asked for one; not done, reasons in 002 S-016
-  (per-user install, no admin needed, elevated app loses key presses). Waiting on their answer.
-- **Language picker** (0.3.0 fixed to hi-IN) — deferred by the user.
+- **Image fallback for apps with no tree (BlueStacks)** — asked for on 2026-11-12 (deferred on
+  11-11). Proposed: screenshot of the window (≤1,568 px a side) → coarse numbered grid → Jev picks a
+  cell → crop with a finer grid → Jev again → click only above a floor; used only when the tree
+  finds nothing. Start from `reference/command-tests/grid.ps1` / `jev-image.mjs`; needs
+  `DecisionRequest.state` to carry an image part. Go-ahead not given.
+- **UAC prompt in the installer** — asked for on 2026-11-14; not done: nothing needs admin, the
+  installer is per-user (a per-machine one would strand every existing install's updates), and an
+  elevated app cannot receive key presses (UIPI). Waiting on the user.
+- **Language picker** (fixed to hi-IN) — deferred by the user.
 - **Per-device quota, or leave account-hopping open?** Unanswered since S-010.
-- ~~Confirm risky actions~~ — no "pakka?" (S-015). ~~Send messages~~ — never, unless asked separately.
+- ~~Confirm risky actions~~ — no "pakka?". ~~Send messages~~ — never, unless asked separately.
+  ~~Ship command mode before the deadline~~ — released in 0.4.0.
 
 ## Ruled out
 
@@ -137,6 +141,9 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 - **Choosing a window by every word of the step** — "search" matched a Google tab. 002.
 - **Reading WhatsApp's results right after typing** — stale list, wrong chat clicked. 002.
 - **Supabase session lock as the cause of the stuck pill** — disproven live. 002.
+- **`spawn("explorer.exe", …, {windowsHide})`** — opens folders invisibly. 002 S-016.
+- **WinRT / PnP / Python libraries for Bluetooth device connect** — the computer-mcp's record;
+  `BluetoothSetServiceState` cycling instead. `docs/command-mode.md`.
 - **Bundling the Python MCP**; **Fn in a hotkey**; **C# in a plain template literal** — 002.
 - **Cerebras**; **Archivo Expanded**; **Marigold on Ice Silver**; **`npx electron-builder`**;
   **synthetic input to drive this app**; **Supabase Storage for installers**; **Soniox**; **a
@@ -148,7 +155,7 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
   `release:*` does — S-011. Every example on the site and in the app is real output — S-012.
 - Command mode never touches dictation: separate key, separate writer, `Pipeline.listen()`.
 - The original MCP at `Projects/mcp/computer-mcp` is never touched; the copy is in
-  `reference/computer-mcp/`. Do not push to or re-add `aryan-2255/subxvoice`.
+  `reference/computer-mcp/` (gitignored). Do not push to or re-add `aryan-2255/subxvoice`.
 
 ## Sessions
 
@@ -162,4 +169,4 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 | S-013 | 2026-11-10 | App redesign; favicon fix; 0.3.0 released | 001 |
 | S-014 | 2026-11-10 → 11-11 | Demo video; command mode researched, built, first test, loop rewritten | 002 |
 | S-015 | 2026-11-11 → 11-12 | All Windows actions; screen control (UIA3 + Jev); eight user tests; stuck pill root cause | 002 |
-| S-016 | 2026-11-14 | Invisible Explorer windows; Bluetooth devices; Roman retry; live suites; **0.4.0 released** | 002 |
+| S-016 | 2026-11-14 | Invisible folders; Bluetooth devices; Roman retry; live suites; **0.4.0 released** | 002 |
