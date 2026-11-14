@@ -1,3 +1,27 @@
+export {
+  AGENT_QUESTION,
+  type AgentDeps,
+  ARGS_SYSTEM,
+  holdBackSending,
+  menu,
+  parseArgs,
+  runCommand,
+} from "./agent/loop";
+export { type Match, type MatchHow, resolveOne } from "./agent/match";
+export { AgentMemory } from "./agent/memory";
+export { boxes, clickable, ELEMENT_QUESTION, READ_SYSTEM, screenSource } from "./agent/screen";
+export type {
+  ActionSource,
+  AgentAction,
+  AgentEvent,
+  AgentOutcome,
+  CommandSource,
+  ScreenDriver,
+  ScreenElement,
+  ScreenSnapshot,
+  StepContext,
+  StepResult,
+} from "./agent/types";
 export type * from "./contracts";
 export { type ErrorCode, notImplemented, SubxError } from "./errors";
 export {

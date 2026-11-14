@@ -2,6 +2,46 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-11 — The command writer moves from gemini-2.5-flash-lite to gemini-2.5-flash
+Screen control made plans longer (search, open the chat, type) and the planner's prompt grew a rule
+per failure. Flash-lite then broke a different command with each prompt change — "hi likho" typed
+literally, a song searched twice, an earlier command planned again. On the 22-command end-to-end
+suite flash held 20–22/22 against flash-lite's 17–18, for ~0.3 s more per command. Still no
+reasoning. `COMMAND_MODEL` in `.env` overrides it in development.
+
+### 2026-11-11 — Command mode types messages but never sends them unless asked separately
+The user's rule: "dost ko message bhejo" types the message into the chat and stops; only a later
+command that asks for nothing but sending ("ab send kar do") sends it. Handing an AI the last
+step of a message to a real person was judged too much responsibility. Enforced in code
+(`holdBackSending`), not just in the planner's prompt, because the planner planned "Press Enter"
+for "Aarnav ko hi bhejo" while being told not to.
+
+### 2026-11-11 — Screen control reads the accessibility tree through hand-declared UIA3, and Jev picks the element
+The approach of `ZJU-REAL/CUA-JEV` and `browser-use/jev-ultrafast` (numbered elements, a classifier
+picks one) rather than a vision model: text in, no pixels, a click on "the Search button" rather
+than a coordinate, 0.5–1 s per choice. UIA3 (native COM) rather than .NET's
+`System.Windows.Automation`, which sees nothing inside WhatsApp's WebView2; declared by hand in
+C# rather than bundling FlaUI's interop DLL, since it needs a dozen slots and runs in the existing
+PowerShell worker. Screen text reaching Jev and the writer was agreed by the user. A vision
+fallback for apps with no tree (BlueStacks, games) is deferred by the user.
+
+### 2026-11-11 — Command mode does not ask "pakka?" before risky actions
+The user chose no spoken confirmation. Actions that lose work or cannot be undone by voice —
+closing windows, stopping programs, turning Wi-Fi off (which also cuts the speech service) — are
+marked `risky` and need the decider at ≥ 0.7 instead of 0.5; the pill says what is happening as it
+happens. A confirmation would be one more round trip in every demo for a case the plan-first loop
+and the floor already guard.
+
+### 2026-11-11 — Command mode plans first, and its writer is Gemini, not gpt-oss
+Command mode (hold Ctrl+Alt, say what to do) splits what was said into steps before acting, then
+lets Jev pick the action for each step. The first version asked Jev after every step whether more
+was needed; in real use it repeated actions — six identical typings, and a window closed that
+nobody named. A fixed plan cannot repeat. The writer that plans and fills in details is
+`google/gemini-2.5-flash-lite`, not the gpt-oss-120b dictation uses: same understanding, but
+gpt-oss stalled for 2–15 s on 37% of calls through Groq that day, which a user waiting on a
+command feels. The Windows side reuses the personal computer-mcp's audited C# inside one
+long-lived PowerShell instead of porting it or bundling Python. Details in `docs/command-mode.md`.
+
 ### 2026-11-10 — In the app, the user's voice is a typeface, not a colour
 The old palette spent two colours on meaning: violet for the product acting, cyan for the user's
 voice. The new one has a single accent, so the split moved from colour to type, the same way the

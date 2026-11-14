@@ -5,7 +5,11 @@ export interface AudioClip {
 }
 
 /** Chosen by the hotkey: keep the user's exact words, or rewrite them in their style. */
-export type Mode = "exact" | "style";
+/**
+ * What a held key means. "exact" and "style" dictate; "command" acts on what was said instead of
+ * typing it (docs/command-mode.md).
+ */
+export type Mode = "exact" | "style" | "command";
 
 /**
  * How non-Latin speech is written down. "native" keeps the language's own script (Devanagari for

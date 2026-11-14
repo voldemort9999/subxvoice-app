@@ -89,6 +89,33 @@ export interface DictationSession {
   partial(): string;
 }
 
+/**
+ * Words commands are made of, offered to speech recognition as likely when hearing a command.
+ * Spoken among Hindi, "Pictures wale folder" came back as "search folder", "features wale folder"
+ * and "इस तरह वाले folder" across seven tries, and every one of them searched the wrong place.
+ */
+export const COMMAND_TERMS = [
+  "Pictures",
+  "Documents",
+  "Downloads",
+  "Desktop",
+  "Videos",
+  "Music",
+  "folder",
+  "File Explorer",
+  "WhatsApp",
+  "YouTube",
+  "Chrome",
+  "BlueStacks",
+  "Notepad",
+  "screenshot",
+];
+
+/** Added to the system prompt when an answer came back in the script it was meant to convert. */
+const STILL_NATIVE =
+  "IMPORTANT: every word of your reply must be in Latin (Roman) letters. Not one Devanagari " +
+  "character may remain — a reply in Devanagari is wrong, however well it is punctuated.";
+
 /** Audio in → text at the cursor. Talks only to plug-point interfaces, never to a vendor or OS. */
 export class Pipeline {
   private readonly deps: PipelineDeps;
@@ -125,6 +152,30 @@ export class Pipeline {
           ? await stream.finish()
           : await this.deps.stt.transcribe({ samples: concat(buffered), sampleRate: 16000 }, { vocabulary });
         return this.complete(transcript, mode, context, dictionary, options, clock.lap());
+      },
+    };
+  }
+
+  /**
+   * Hearing only: the same warm stream and dictionary corrections as dictation, and nothing after
+   * — no routing, no rewrite, no paste, no history. Command mode takes the words from here and
+   * decides for itself what to do with them.
+   */
+  async listen(): Promise<{ push(samples: Int16Array): void; finish(): Promise<string> }> {
+    const dictionary = await this.deps.dictionary.all();
+    const vocabulary = [...COMMAND_TERMS, ...dictionary.map((entry) => entry.word)];
+    const stream = this.deps.stt.startStream ? await this.deps.stt.startStream({ vocabulary }) : null;
+    const buffered: Int16Array[] = [];
+    return {
+      push: (samples) => {
+        if (stream) stream.push(samples);
+        else buffered.push(samples);
+      },
+      finish: async () => {
+        const transcript = stream
+          ? await stream.finish()
+          : await this.deps.stt.transcribe({ samples: concat(buffered), sampleRate: 16000 }, { vocabulary });
+        return applyRules(transcript.text, dictionary);
       },
     };
   }
@@ -295,7 +346,15 @@ export class Pipeline {
       if (!rewritten) return { text, error: "Rewriting came back empty, so the words went in as heard." };
       // Asked for Roman and still got Devanagari: the call succeeded but did not do the one thing
       // it was for, which from the outside is indistinguishable from the feature being broken.
+      // Asked once more, firmly: on 2026-11-14 a 900-character dictation came back cleaned up but
+      // still in Devanagari, while the same text sent again came back in Roman both times — the
+      // first answer had come from a fallback upstream, not Groq.
       if (needsTransliteration(rewritten, script)) {
+        const again = await this.deps.llm
+          .complete({ system: `${system}\n\n${STILL_NATIVE}`, messages: [{ role: "user", content: text }] })
+          .then((response) => response.text.trim())
+          .catch(() => "");
+        if (again && !needsTransliteration(again, script)) return { text: again };
         return { text: rewritten, error: "Rewriting left the text in its original script." };
       }
       return { text: rewritten };

@@ -3,11 +3,14 @@ import { existsSync, renameSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  AgentMemory,
   type DictionaryEntry,
   type HotkeyBinding,
   type PermissionKind,
   Pipeline,
+  runCommand,
   SubxError,
+  screenSource,
   type WritingTone,
 } from "@subx/core";
 import { app, BrowserWindow, ipcMain, Menu, shell, type Tray } from "electron";
@@ -184,6 +187,13 @@ function assertDictionaryEntry(value: unknown): DictionaryEntry {
   };
 }
 
+/** The command key's default. See the comment where settings are created. */
+const COMMAND_KEYS = "ctrl+alt";
+
+/** "alt+ctrl" and "ctrl+alt" are the same chord. */
+const sameChord = (a: string, b: string) =>
+  a.toLowerCase().split("+").sort().join("+") === b.toLowerCase().split("+").sort().join("+");
+
 const isTone = (value: unknown): value is WritingTone =>
   value === "professional" || value === "formal" || value === "casual";
 
@@ -194,6 +204,10 @@ function assertSettings(value: unknown, accepts: (keys: string) => boolean): Par
   if (typeof input.hotkey === "string") {
     if (!accepts(input.hotkey)) throw new Error(`Unsupported hotkey: ${input.hotkey}`);
     patch.hotkey = input.hotkey;
+  }
+  if (typeof input.commandHotkey === "string") {
+    if (!accepts(input.commandHotkey)) throw new Error(`Unsupported hotkey: ${input.commandHotkey}`);
+    patch.commandHotkey = input.commandHotkey;
   }
   if (input.script === "native" || input.script === "roman") patch.script = input.script;
   if (typeof input.launchAtLogin === "boolean") patch.launchAtLogin = input.launchAtLogin;
@@ -234,6 +248,10 @@ async function start(): Promise<void> {
   // computer, not the person.
   const settings = new JsonSettingsStore<AppSettings>(() => join(dataDir, "settings.json"), {
     hotkey: platform.hotkey.defaultBindings()[0]?.keys ?? "",
+    // Ctrl+Alt, not Fn+Alt: Fn is handled inside the keyboard and never reaches Windows, so no
+    // application can watch it. Not Win+Alt either — releasing a chord with Win in it can open
+    // the Start menu.
+    commandHotkey: COMMAND_KEYS,
     script: "roman",
     microphoneId: "",
     launchAtLogin: false,
@@ -256,10 +274,19 @@ async function start(): Promise<void> {
   applyLaunchAtLogin((await settings.all()).launchAtLogin);
 
   const bindings = async (): Promise<HotkeyBinding[]> => {
-    const { hotkey } = await settings.all();
+    const { hotkey, commandHotkey } = await settings.all();
     // settings.json is a file the user can edit, so a stored hotkey is re-checked every time.
-    if (!hotkey || !platform.hotkey.accepts(hotkey)) return platform.hotkey.defaultBindings();
-    return [{ keys: hotkey, mode: "exact" }];
+    const dictate: HotkeyBinding[] =
+      !hotkey || !platform.hotkey.accepts(hotkey)
+        ? platform.hotkey.defaultBindings()
+        : [{ keys: hotkey, mode: "exact" }];
+    // Watched only where command mode can actually run, and never when it is the dictation chord:
+    // one key cannot mean both, and dictating is what the user set up first.
+    const keys = commandHotkey || COMMAND_KEYS;
+    if (!platform.commands || !engines.decider || !engines.writer) return dictate;
+    if (!platform.hotkey.accepts(keys) || dictate.some((binding) => sameChord(binding.keys, keys)))
+      return dictate;
+    return [...dictate, { keys, mode: "command" }];
   };
 
   ipcMain.handle(IPC.authState, () => account.state());
@@ -346,6 +373,24 @@ async function start(): Promise<void> {
       })
     : null;
 
+  // What was said and done in the last few minutes, so "now type this in it" knows what "it" is.
+  const memory = new AgentMemory();
+  const commands = platform.commands;
+  const command =
+    commands && engines.decider && engines.writer
+      ? {
+          // The OS's own actions first; the screen only for what they cannot do (docs/command-mode.md).
+          sources: [
+            commands,
+            ...(platform.screen
+              ? [screenSource(platform.screen, engines.decider, engines.writer, (line) => console.log(line))]
+              : []),
+          ],
+          decider: engines.decider,
+          writer: engines.writer,
+        }
+      : null;
+
   const dictation = new DictationController(
     pill,
     mic,
@@ -368,6 +413,21 @@ async function start(): Promise<void> {
         }
       },
       remainingSeconds: async () => (await account.usage())?.remaining ?? null,
+      warmCommands: () => commands?.warm?.(),
+      command: command
+        ? (said) =>
+            runCommand(said, {
+              decider: command.decider,
+              writer: command.writer,
+              sources: command.sources,
+              memory,
+              // The pill says what is about to happen before it happens.
+              onEvent: (event) => {
+                if (event.kind !== "thinking") pill.setState({ kind: "processing", message: event.what });
+              },
+              log: (line) => console.log(line),
+            })
+        : undefined,
       onHistoryChanged: notifyHistoryChanged,
       log: (line) => console.log(line),
     }),
@@ -458,5 +518,7 @@ app.on("second-instance", () => openMainWindow());
 
 app.on("will-quit", () => {
   tray?.destroy();
+  // Its PowerShell would otherwise outlive the app.
+  platform.commands?.dispose?.();
   void platform.hotkey.unregisterAll();
 });

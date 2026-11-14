@@ -32,6 +32,14 @@ export interface OpenRouterOptions {
    * the same request succeeded on Groq, CoreWeave, BaseTen and Near AI every time.
    */
   ignore?: string[];
+  /**
+   * Whether to ask for reasoning at all. On by default, at "low": Groq rejects gpt-oss with it
+   * off. Off for a model that does not need it — gemini-2.5-flash-lite filled command details at a
+   * steady ~1 s without it, and thinking would only slow the one step the user is waiting on.
+   */
+  reasoning?: boolean;
+  /** How long one request may take before it is abandoned. */
+  timeoutMs?: number;
 }
 
 interface ChatResponse {
@@ -62,7 +70,7 @@ export class OpenRouterLlm implements LlmProvider {
         Authorization: `Bearer ${await resolveToken(this.options.token)}`,
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(this.options.timeoutMs ?? TIMEOUT_MS),
       body: JSON.stringify({
         // `||`, not `??`: an empty model name is not a choice, and OpenRouter rejects it.
         model: this.options.model?.trim() || DEFAULT_MODEL,
@@ -72,7 +80,8 @@ export class OpenRouterLlm implements LlmProvider {
         ],
         temperature: 0,
         max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
-        reasoning: { effort: "low" },
+        ...(this.options.reasoning === false ? {} : { reasoning: { effort: "low" } }),
+        ...(request.json ? { response_format: { type: "json_object" } } : {}),
         // An empty object is still a routing preference to OpenRouter, so send nothing.
         ...(Object.keys(provider).length ? { provider } : {}),
       }),

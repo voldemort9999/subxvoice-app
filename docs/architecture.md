@@ -29,6 +29,22 @@ Every dictation is saved to local history: audio, text, app and per-stage timing
 | Insert | `Platform.inserter` | Full clipboard snapshot → Cmd/Ctrl+V → user's clipboard restored. If pasting fails the dictation is still saved to history and the pill says why. |
 | History | `HistoryStore` plug | Local JSON file + WAV recordings today (`apps/desktop/src/main/stores.ts`); SQLite later. Timings per stage are recorded. |
 
+**Roman output is checked, and asked for twice if need be** (`Pipeline.finalise`). A reply still in
+Devanagari after Roman was asked for is retried once with a firm line added to the system prompt;
+only if that also fails does the text go in as it came, with the reason in history. On 2026-11-14
+a ~900-character dictation came back cleaned up but in Devanagari, while the same text sent again
+through Groq came back Roman twice (~1 s): the first answer had come from a fallback upstream.
+
+**One press at a time, by number** (`DictationController`, `apps/desktop/src/main/dictation.ts`).
+Each press takes a number; the stream it opens and the cancel it may run check that number before
+touching the controller. Without it the pill stuck on "•••" for good (found live, 2026-11-12): a
+tap under 250 ms cancels, and its cancel awaits its own stream's opening; by then the next press
+had started, so the old cancel cleared the new press's `run`, the audio piled up in `pending`, and
+the release found no run and returned with the state still "processing" — which ignores every
+later press — after clearing the 60 s watchdog. A release that finds no run now ends the run with
+"Couldn't start listening", and the watchdog (`STUCK_MS`) frees anything still "processing" after
+60 s and logs the stage it was at. `dictation.test.ts` replays the race and fails without the fix.
+
 ## Plug points
 
 | Interface | File | Plugs today | Later |

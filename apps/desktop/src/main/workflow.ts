@@ -7,7 +7,16 @@
 // The controller above it only knows about the hotkey, the pill and the microphone; the pipeline
 // below it only knows about plug-point interfaces. Everything app-specific — which settings apply,
 // what the pill says, where the audio file goes, what a failure reads like — lives here.
-import type { AppContext, AudioClip, ContextReader, Intent, Mode, Pipeline, SessionRecord } from "@subx/core";
+import type {
+  AgentOutcome,
+  AppContext,
+  AudioClip,
+  ContextReader,
+  Intent,
+  Mode,
+  Pipeline,
+  SessionRecord,
+} from "@subx/core";
 import type { AppSettings } from "../shared/ipc";
 import type { DictationEngine, DictationRun } from "./dictation";
 
@@ -38,6 +47,10 @@ export interface WorkflowDeps {
    * not pay for a round trip it does not need.
    */
   remainingSeconds?(): Promise<number | null>;
+  /** Carries out what was said instead of typing it. Absent where command mode is not built. */
+  command?(said: string): Promise<AgentOutcome>;
+  /** Starts anything slow behind command mode, on key-down, while the user is still speaking. */
+  warmCommands?(): void;
   log?(line: string): void;
 }
 
@@ -50,6 +63,8 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
       if (deps.signedIn && !(await deps.signedIn().catch(() => false))) {
         throw new Error("Sign in to SUBXVoice to dictate.");
       }
+
+      if (mode === "command") return openCommand(deps);
 
       const settings = await deps.settings.all();
       const context = await deps.context.current().catch(() => ({}) as AppContext);
@@ -69,13 +84,7 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
           onIntent: deps.onIntent,
         });
       } catch (error) {
-        // The backend refuses an exhausted account before the upgrade, which reaches the app as a
-        // plain connection failure. Saying "sign in again" there would send the user nowhere.
-        const remaining = await deps.remainingSeconds?.().catch(() => null);
-        if (remaining !== null && remaining !== undefined && remaining <= 0) {
-          throw new Error("You've used today's dictation time. It resets tomorrow.");
-        }
-        throw error;
+        throw await explain(deps, error);
       }
 
       return {
@@ -110,6 +119,51 @@ export function createWorkflow(deps: WorkflowDeps): DictationEngine {
       };
     },
   };
+}
+
+/**
+ * The command key: the same warm stream as dictation, but the words are carried out rather than
+ * typed. Nothing goes to history — a command is not something the user said for keeping.
+ */
+async function openCommand(deps: WorkflowDeps): Promise<DictationRun> {
+  const { pipeline, command } = deps;
+  if (!pipeline || !command) throw new Error("Commands aren't available on this computer");
+  deps.warmCommands?.();
+  let hearing: Awaited<ReturnType<Pipeline["listen"]>>;
+  try {
+    hearing = await pipeline.listen();
+  } catch (error) {
+    throw await explain(deps, error);
+  }
+  return {
+    push: (samples) => hearing.push(samples),
+    finish: async () => {
+      const said = await hearing.finish();
+      if (!said) return { text: "Nothing heard" };
+      deps.onHeard(said);
+      deps.log?.(`command: "${said}"`);
+      const outcome = await command(said);
+      deps.log?.(`command: ${outcome.ok ? "done" : "stopped"} — ${outcome.message}`);
+      // Shown as an error when nothing was done, so "I can't do that" never looks like success.
+      if (!outcome.ok) throw new Error(outcome.message);
+      return { text: outcome.message };
+    },
+    cancel: () => {
+      void hearing.finish().catch(() => {});
+    },
+  };
+}
+
+/**
+ * The backend refuses an exhausted account before the upgrade, which reaches the app as a plain
+ * connection failure. Saying "sign in again" there would send the user nowhere.
+ */
+async function explain(deps: WorkflowDeps, error: unknown): Promise<unknown> {
+  const remaining = await deps.remainingSeconds?.().catch(() => null);
+  if (remaining !== null && remaining !== undefined && remaining <= 0) {
+    return new Error("You've used today's dictation time. It resets tomorrow.");
+  }
+  return error;
 }
 
 /** No speech-to-text configured: still record, so nothing the user said is thrown away. */

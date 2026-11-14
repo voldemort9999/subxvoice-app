@@ -1,3 +1,4 @@
+import type { CommandSource, ScreenDriver } from "../agent/types";
 import type { AppContext, AudioClip, Mode } from "../types";
 
 export type HotkeyEvent =
@@ -74,4 +75,8 @@ export interface Platform {
   permissions: Permissions;
   context: ContextReader;
   desktop: DesktopActions;
+  /** What command mode can do on this OS. Absent where command mode is not built yet. */
+  commands?: CommandSource;
+  /** The screen, through the accessibility tree, for what command mode cannot do directly. */
+  screen?: ScreenDriver;
 }

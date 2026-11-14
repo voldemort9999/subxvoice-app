@@ -71,6 +71,8 @@ export interface AppInfo {
 export interface AppSettings {
   /** One of `AppInfo.supportedKeys`. */
   hotkey: string;
+  /** Held to give a command instead of dictating. Ignored when it is the same as `hotkey`. */
+  commandHotkey: string;
   script: ScriptPreference;
   /** MediaDevices id, or "" for the system default. */
   microphoneId: string;

@@ -31,6 +31,24 @@ describe("OpenRouterLlm request body", () => {
     expect(body().provider).toEqual({ order: ["groq"], ignore: ["cerebras"] });
   });
 
+  it("asks for low reasoning and free text by default, which dictation depends on", async () => {
+    const body = captureBody();
+    await ask(llm());
+    expect(body().reasoning).toEqual({ effort: "low" });
+    expect(body()).not.toHaveProperty("response_format");
+  });
+
+  it("leaves reasoning out when told to, and asks for JSON when the request does", async () => {
+    const body = captureBody();
+    await llm({ reasoning: false }).complete({
+      system: "s",
+      messages: [{ role: "user", content: "x" }],
+      json: true,
+    });
+    expect(body()).not.toHaveProperty("reasoning");
+    expect(body().response_format).toEqual({ type: "json_object" });
+  });
+
   it("omits provider routing entirely when nothing is configured", async () => {
     const body = captureBody();
     await ask(llm());

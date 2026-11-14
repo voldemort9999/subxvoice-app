@@ -1,4 +1,4 @@
-import { Pipeline } from "@subx/core";
+import { type AgentOutcome, Pipeline } from "@subx/core";
 import { FakeInserter, FakeLlm, FakeStt, MemoryDictionary, MemoryHistory } from "@subx/core/fakes";
 import { describe, expect, it } from "vitest";
 import type { AppSettings } from "../shared/ipc";
@@ -12,6 +12,7 @@ function build(opts: {
   script?: AppSettings["script"];
   withPipeline?: boolean;
   problems?: string[];
+  command?: (said: string) => Promise<AgentOutcome>;
 }) {
   const inserter = new FakeInserter();
   const history = new MemoryHistory();
@@ -36,6 +37,7 @@ function build(opts: {
     settings: {
       all: async () => ({
         hotkey: "ctrl+win",
+        commandHotkey: "ctrl+alt",
         script: opts.script ?? "roman",
         microphoneId: "",
         launchAtLogin: false,
@@ -56,10 +58,47 @@ function build(opts: {
     onHistoryChanged: () => {
       changes++;
     },
+    command: opts.command,
   };
 
   return { workflow: createWorkflow(deps), inserter, history, saved, heard, changes: () => changes };
 }
+
+describe("createWorkflow in command mode", () => {
+  it("carries out what was heard instead of typing it, and keeps nothing in history", async () => {
+    const said: string[] = [];
+    const { workflow, inserter, history, heard } = build({
+      spoken: "volume आधा कर दो",
+      command: async (text) => {
+        said.push(text);
+        return { message: "Volume set to 50%", ok: true, steps: ["Volume set to 50%"] };
+      },
+    });
+    const run = await workflow.open("command");
+    run.push(clip.samples);
+    const { text } = await run.finish(clip);
+
+    expect(said).toEqual(["volume आधा कर दो"]);
+    expect(text).toBe("Volume set to 50%");
+    expect(heard).toEqual(["volume आधा कर दो"]);
+    expect(inserter.inserted).toEqual([]);
+    expect(await history.recent(10)).toEqual([]);
+  });
+
+  it("shows a command that did nothing as a failure, not as success", async () => {
+    const { workflow } = build({
+      command: async () => ({ message: "That isn't something I can do", ok: false, steps: [] }),
+    });
+    const run = await workflow.open("command");
+    run.push(clip.samples);
+    await expect(run.finish(clip)).rejects.toThrow("That isn't something I can do");
+  });
+
+  it("refuses to listen for a command where commands cannot run", async () => {
+    const { workflow } = build({});
+    await expect(workflow.open("command")).rejects.toThrow("Commands aren't available on this computer");
+  });
+});
 
 describe("createWorkflow", () => {
   it("runs the full chain and types the final text", async () => {

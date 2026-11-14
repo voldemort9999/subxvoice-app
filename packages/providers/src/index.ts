@@ -23,6 +23,10 @@ export interface ProviderConfig {
   order?: string[];
   /** Upstream providers that must never serve the request (OpenRouter). */
   ignore?: string[];
+  /** Ask for reasoning (OpenRouter). On unless false. */
+  reasoning?: boolean;
+  /** Abandon a request after this long (OpenRouter). */
+  timeoutMs?: number;
 }
 
 // To add a vendor: create stt/<vendor>.ts (or llm/<vendor>.ts) implementing the
@@ -56,6 +60,8 @@ export function createLlm(config: ProviderConfig): LlmProvider {
         only: config.only,
         order: config.order,
         ignore: config.ignore,
+        reasoning: config.reasoning,
+        timeoutMs: config.timeoutMs,
       });
     case "fake":
       return new FakeLlm("Hello from the fake LLM provider.");

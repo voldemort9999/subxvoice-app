@@ -4,7 +4,7 @@ import { isKeyDown, VK } from "./win32";
 const POLL_MS = 15; // imperceptible next to a ~800 ms pipeline
 
 /** A key name maps to the virtual keys that satisfy it — either side of the keyboard counts. */
-const KEYS: Record<string, number[]> = {
+export const KEYS: Record<string, number[]> = {
   ctrl: [VK.control],
   shift: [VK.shift],
   alt: [VK.alt],

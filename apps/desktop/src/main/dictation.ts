@@ -6,6 +6,11 @@ import type { PillWindow } from "./pill";
 export const SAMPLE_RATE = 16000;
 const MIN_HOLD_MS = 250; // a shorter press is an accidental tap
 const RESULT_VISIBLE_MS = 1500;
+/**
+ * A run still processing after this is stuck, not slow: the pill once sat on "•••" until the app
+ * was restarted, and every later key press was ignored because the state never left "processing".
+ */
+const STUCK_MS = 60_000;
 
 /**
  * One dictation in flight. The engine opens an STT stream the moment the key goes down, so audio is
@@ -42,6 +47,15 @@ export class DictationController {
   private run: DictationRun | null = null;
   private opening: Promise<void> = Promise.resolve();
   private resetTimer: NodeJS.Timeout | undefined;
+  /** Where a run is, so a stuck one says in the log where it stopped. */
+  private stage = "";
+  /**
+   * Which press the fields above belong to. A tap's cancel waits for its stream to open, and by
+   * then the next press has started: the old cancel then cleared the new press's `run`, its audio
+   * piled up in `pending`, and its release found no run and returned with the pill on "•••" — and
+   * every press after it ignored, for good. Work from an older press checks this and keeps out.
+   */
+  private press = 0;
 
   constructor(pill: PillWindow, mic: MicSource, engine: DictationEngine) {
     this.pill = pill;
@@ -57,6 +71,7 @@ export class DictationController {
 
   private start(mode: Mode): void {
     clearTimeout(this.resetTimer);
+    const press = ++this.press;
     this.state = "listening";
     this.mode = mode;
     this.pressedAt = Date.now();
@@ -73,15 +88,17 @@ export class DictationController {
     this.opening = this.engine
       .open(mode)
       .then((run) => {
-        if (this.state === "idle") {
-          run.cancel(); // cancelled during the ~200 ms open
+        if (press !== this.press || this.state === "idle") {
+          run.cancel(); // cancelled during the ~200 ms open, or a newer press has taken over
           return;
         }
         this.run = run;
         for (const chunk of this.pending) run.push(chunk);
         this.pending = [];
       })
-      .catch((error: unknown) => this.failOpen(error));
+      .catch((error: unknown) => {
+        if (press === this.press) this.failOpen(error);
+      });
 
     this.mic
       .start((samples) => {
@@ -104,28 +121,54 @@ export class DictationController {
     }
     this.state = "processing";
     this.pill.setState({ kind: "processing" });
+    const started = Date.now();
+    const watchdog = setTimeout(() => {
+      if (this.state !== "processing") return;
+      console.log(`dictation: stuck for ${STUCK_MS / 1000} s at "${this.stage}" — released`);
+      this.showResult({ kind: "error", message: "That took too long — try again" });
+    }, STUCK_MS);
+    this.stage = "stopping the microphone";
     await this.mic.stop();
+    this.stage = "waiting for the speech stream to open";
     await this.opening; // make sure the stream finished opening (or failed)
 
     const clip: AudioClip = { samples: concat(this.chunks), sampleRate: SAMPLE_RATE };
     this.chunks = [];
     const run = this.run;
     this.run = null;
-    if (!run) return; // open failed; failOpen already showed the error
+    if (!run) {
+      clearTimeout(watchdog);
+      // Usually the open failed and failOpen already showed why. If nothing did, saying so here is
+      // what keeps "processing" from outliving the run — the pill stuck on "•••" came from this.
+      if (this.state === "processing") {
+        console.log("dictation: released with no speech stream — nothing to finish");
+        this.showResult({ kind: "error", message: "Couldn't start listening — try again" });
+      }
+      return;
+    }
 
+    this.stage = "finishing (transcript, then the command or the paste)";
     try {
       const result = await run.finish(clip);
-      this.showResult({ kind: "done", message: result.text, warning: result.warning });
+      if (this.state === "processing")
+        this.showResult({ kind: "done", message: result.text, warning: result.warning });
     } catch (error) {
-      this.showResult({ kind: "error", message: message(error) });
+      if (this.state === "processing") this.showResult({ kind: "error", message: message(error) });
+    } finally {
+      clearTimeout(watchdog);
+      const took = Date.now() - started;
+      if (took > 15_000) console.log(`dictation: slow — ${took} ms, last at "${this.stage}"`);
     }
   }
 
   private async cancel(): Promise<void> {
+    const press = this.press;
     this.state = "idle";
     this.pill.setState({ kind: "idle" });
     await this.mic.stop();
     await this.opening;
+    // A new press may have started while this waited; its run and audio are not this one's to drop.
+    if (press !== this.press) return;
     this.run?.cancel();
     this.run = null;
     this.chunks = [];

@@ -99,6 +99,23 @@ describe("Pipeline", () => {
     expect(history.records[0]?.rewriteError).toMatch(/original script/i);
   });
 
+  it("asks once more, firmly, when the first answer stayed in Devanagari", async () => {
+    const replies = ["मेरा नाम भावेश है", "Mera naam Bhavesh hai"];
+    const llm = new FakeLlm("");
+    llm.complete = async (request) => {
+      llm.requests.push(request);
+      return { text: replies.shift() ?? "", toolCalls: [] };
+    };
+    const { pipeline, history } = setup("मेरा नाम भावेश है", llm);
+
+    await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+    expect(llm.requests).toHaveLength(2);
+    expect(llm.requests[1]?.system).toMatch(/Latin \(Roman\) letters/);
+    expect(history.records[0]?.finalText).toBe("Mera naam Bhavesh hai");
+    expect(history.records[0]?.rewriteError).toBeUndefined();
+  });
+
   it("a command with no intent of its own is handed back, not typed", async () => {
     const inserter = new FakeInserter();
     const pipeline = new Pipeline({

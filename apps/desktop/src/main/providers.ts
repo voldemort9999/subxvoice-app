@@ -17,6 +17,8 @@ export interface Engines {
   llm?: LlmProvider;
   /** Decides dictation vs. "write me an email". Absent means only trigger phrases route. */
   decider?: DeciderProvider;
+  /** Fills in a command's details — the volume level, the URL. Absent means no command mode. */
+  writer?: LlmProvider;
   /** Why an engine is missing, shown in Settings. */
   problems: string[];
 }
@@ -49,6 +51,7 @@ export function createEngines(account: Account): Engines {
   let stt: SttProvider | undefined;
   let llm: LlmProvider | undefined;
   let decider: DeciderProvider | undefined;
+  let writer: LlmProvider | undefined;
 
   // Read per dictation. An empty string means nobody is signed in, and the backend will say so.
   const token = () => account.token();
@@ -105,7 +108,27 @@ export function createEngines(account: Account): Engines {
     console.error("Intent classifier unavailable:", error);
   }
 
-  return { stt, llm, decider, problems };
+  try {
+    writer = createLlm({
+      id: "openrouter",
+      token,
+      baseUrl: LLM_URL,
+      // Not gpt-oss-120b, which dictation uses. Measured on 17 Hinglish commands, 3 runs each,
+      // 2026-11-11: gpt-oss-120b understood them but took over 2 s on 19 of 51 calls, up to 15 s,
+      // on a step the user is waiting on. gemini-2.5-flash-lite got 51/51 at a steady ~1 s, and
+      // was right on Devanagari input too. No reasoning: it was not needed, and only slows it.
+      // Then gemini-2.5-flash, once screen control made the plans longer: on the same 22-command
+      // end-to-end suite flash-lite broke a different command with every prompt change (repeated
+      // steps, "hi likho" typed literally), flash held 20–22/22 for ~0.3 s more a command.
+      model: fromEnv("COMMAND_MODEL") ?? "google/gemini-2.5-flash",
+      reasoning: false,
+      timeoutMs: 8000,
+    });
+  } catch (error) {
+    console.error("Command writer unavailable:", error);
+  }
+
+  return { stt, llm, decider, writer, problems };
 }
 
 const describe = (what: string, error: unknown) =>

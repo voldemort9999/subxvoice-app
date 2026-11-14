@@ -11,6 +11,8 @@ export interface LlmRequest {
   /** Tools the model may call (built-in, OS or MCP — see ToolRegistry). */
   tools?: ToolSpec[];
   maxTokens?: number;
+  /** Ask the model for one JSON object rather than prose. */
+  json?: boolean;
 }
 
 export interface ToolCall {
