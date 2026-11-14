@@ -1,5 +1,6 @@
 import type { SessionRecord } from "@subx/core";
 import { AudioButton } from "../shared/AudioButton";
+import { FOLLOW_EXAMPLES } from "../shared/follow";
 import { DAY_MS, formatCount, formatDuration, formatSpan, formatTime, streakDays } from "../shared/format";
 import { HistoryRow } from "../shared/HistoryRow";
 import { useHistory, usePermissions } from "../shared/hooks";
@@ -26,9 +27,12 @@ function streakNote(streak: number): string {
 
 export function DashboardPage({
   hotkey,
+  followKey,
   onNavigate,
 }: {
   hotkey: string;
+  /** The Follow My Words key; absent where it cannot run, and the page is then dictation only. */
+  followKey?: string;
   onNavigate: (page: PageId) => void;
 }) {
   const records = useHistory();
@@ -55,6 +59,8 @@ export function DashboardPage({
           </div>
         </Notice>
       )}
+
+      {followKey && <FollowPanel keys={followKey} />}
 
       {latest ? <LastDictation record={latest} /> : <FirstRun hotkey={hotkey} />}
 
@@ -168,13 +174,42 @@ function LastDictation({ record }: { record: SessionRecord }) {
 function FirstRun({ hotkey }: { hotkey: string }) {
   return (
     <section className="border-l-[3px] border-marigold bg-paper px-6 py-7">
-      <h2 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[28px]">
-        Hold <kbd className="kbd text-[15px]">{hotkey}</kbd> and say something
+      <h2 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[24px]">
+        To type instead, hold <kbd className="kbd text-[15px]">{hotkey}</kbd>
       </h2>
       <p className="mt-3 max-w-[52ch] text-[14px] leading-relaxed text-ink-soft">
         Speak Hindi, English, or both in one sentence. The text lands wherever your cursor is, and every
         recording stays on this computer.
       </p>
+    </section>
+  );
+}
+
+/**
+ * Follow My Words leads the dashboard, on the one dark panel in the content area — the same
+ * Aubergine as the sidebar and as the website's Follow My Words section. Requests are not kept in
+ * history, so this shows what to say rather than what was said.
+ */
+function FollowPanel({ keys }: { keys: string }) {
+  return (
+    <section className="bg-side px-7 py-7 text-side-ink">
+      <h2 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[28px]">
+        Follow My Words
+        <kbd className="kbd border-side-rule bg-side-rule text-[15px] text-side-ink">{keys}</kbd>
+      </h2>
+      <p className="mt-3 max-w-[60ch] text-[14px] leading-relaxed text-side-soft">
+        Hold {keys} while you work and say what you need done, in Hindi, English or both. It does it in front
+        of you, and the pill says what it did. Messages are typed into the chat and left for you to send.
+      </p>
+      <p className="mt-6 text-xs text-side-soft">Try saying</p>
+      <ul className="mt-2 grid gap-px bg-side-rule sm:grid-cols-2">
+        {FOLLOW_EXAMPLES.map((example) => (
+          <li key={example.say} className="bg-side py-3 pr-4">
+            <span className="block text-xs text-marigold">{example.kind}</span>
+            <span className="spoken mt-1 block text-[15px] text-side-ink">“{example.say}”</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

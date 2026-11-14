@@ -2,6 +2,7 @@ import type { WritingTone } from "@subx/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { AppInfo } from "../../../shared/ipc";
 import { AuthShell } from "../shared/AuthShell";
+import { followKey } from "../shared/follow";
 import { hotkeyLabel } from "../shared/format";
 import { HotkeyRecorder } from "../shared/HotkeyRecorder";
 import { useSettings } from "../shared/hooks";
@@ -13,7 +14,7 @@ type Step = "name" | "hotkey" | "tone";
 /** Numbered because it is a sequence: each step is done before the next one is shown. */
 const STEPS: { id: Step; title: string }[] = [
   { id: "name", title: "Your name" },
-  { id: "hotkey", title: "Your key" },
+  { id: "hotkey", title: "Your keys" },
   { id: "tone", title: "How it writes" },
 ];
 
@@ -36,6 +37,9 @@ export function OnboardingPage({ info, email }: { info: AppInfo | null; email: s
   }, [step]);
 
   const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "ctrl+win";
+  // Follow My Words comes first where it runs (Windows); elsewhere this is the dictation key alone.
+  const follows = Boolean(info?.customHotkeys && (followKey(info) || settings?.commandHotkey));
+  const askKey = settings?.commandHotkey || followKey(info) || "ctrl+alt";
   const current = STEPS.findIndex((item) => item.id === step);
 
   function next(event: FormEvent) {
@@ -115,11 +119,32 @@ export function OnboardingPage({ info, email }: { info: AppInfo | null; email: s
           </form>
         ) : step === "hotkey" ? (
           <div>
-            <h1 className="text-[28px]">Pick your dictation key</h1>
+            <h1 className="text-[28px]">{follows ? "Your two keys" : "Pick your dictation key"}</h1>
             <p className="mt-2 mb-7 text-ink-soft">
-              Hold it anywhere to talk, let go to stop. You can change it later in Settings.
+              {follows
+                ? "Hold one to ask, the other to type. Let go to stop. Change either later in Settings."
+                : "Hold it anywhere to talk, let go to stop. You can change it later in Settings."}
             </p>
 
+            {follows && info && (
+              <div className="mb-7">
+                <p className="font-semibold">Follow My Words</p>
+                <p className="mt-1 mb-3 text-ink-soft">
+                  Hold it while you work and say what you need done — “Pictures wale folder mein mera resume
+                  dhoondo”, “WhatsApp pe Aryan ko likho aaj main nahi aa paunga”.
+                </p>
+                <HotkeyRecorder
+                  value={askKey}
+                  presets={[...new Set(["ctrl+alt", ...info.supportedKeys])]}
+                  onChange={(keys) => update({ commandHotkey: keys })}
+                />
+              </div>
+            )}
+
+            {follows && <p className="font-semibold">Dictation</p>}
+            {follows && (
+              <p className="mt-1 mb-3 text-ink-soft">Hold it to type by voice, wherever your cursor is.</p>
+            )}
             {info?.customHotkeys ? (
               <HotkeyRecorder
                 value={hotkey}
@@ -153,9 +178,9 @@ export function OnboardingPage({ info, email }: { info: AppInfo | null; email: s
           <div>
             <h1 className="text-[28px]">How should we write for you?</h1>
             <p className="mt-2 mb-6 leading-relaxed text-ink-soft">
-              Ask for an email or a message out loud — “write a mail to my manager about tomorrow's leave” —
-              and SUBXVoice writes it instead of typing what you said. This is the voice it uses. Change it
-              any time in Settings.
+              On the dictation key, ask for an email or a message out loud — “write a mail to my manager about
+              tomorrow's leave” — and SUBXVoice writes it instead of typing what you said. This is the voice
+              it uses. Change it any time in Settings.
             </p>
 
             <ToneChoice
@@ -178,7 +203,7 @@ export function OnboardingPage({ info, email }: { info: AppInfo | null; email: s
             )}
 
             <Button variant="primary" onClick={finish} disabled={busy} className="mt-7 w-full py-2.5">
-              {busy ? "One moment…" : `Start dictating with ${hotkeyLabel(hotkey)}`}
+              {busy ? "One moment…" : `Start with ${hotkeyLabel(follows ? askKey : hotkey)}`}
             </Button>
             <BackButton onClick={() => setStep("hotkey")} />
           </div>

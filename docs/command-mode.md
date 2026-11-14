@@ -1,4 +1,4 @@
-# Command mode — speak, and the computer does it
+# Command mode ("Follow My Words") — speak, and the computer does it
 
 Hold a second key, say what you want in Hindi, English or both, and the machine does it. The
 existing hotkey still dictates; this is a separate key that acts instead of typing.

@@ -34,6 +34,13 @@ const MIN_CONFIDENCE = 0.5;
  */
 const RISKY_CONFIDENCE = 0.7;
 
+/**
+ * A risky action Jev chose but under 0.7 is still done when the writer, asked separately, chooses
+ * the same one — down to this. At 0.5 "band karo" is split between closing and killing, and stays
+ * refused.
+ */
+const AGREED_RISKY_CONFIDENCE = 0.6;
+
 /** Offered on every step, so a step no action can do is not forced onto the nearest one. */
 const NOTHING_FITS = "nothing_fits";
 
@@ -114,6 +121,11 @@ export const SPLIT_SYSTEM =
   // "Chalao" plays, "search karo" only searches: the user asked for a song and got a results page.
   '\'YouTube pe Kesariya chalao\' → ["Search YouTube for Kesariya", "Click the 1st result in ' +
   'YouTube"]. \'YouTube pe Kesariya search karo\' → ["Search YouTube for Kesariya"]. ' +
+  // Both were planned as "open google.com, type into its box, press Enter", the second one into
+  // Google's box because the command before it had opened Google.
+  "'Google pe aaj ka weather search karo' → [\"Search Google for aaj ka weather\"]. " +
+  "'YouTube pe Kahani YT channel search karo' → [\"Search YouTube for Kahani YT channel\"] — the " +
+  "site the user names now wins over the one the last command used. " +
   // Carrying on where the last command left off, without the user naming the place again.
   "Continuing after a YouTube search: 'first wala chalao' → [\"Click the 1st result in YouTube\"]; " +
   '\'ab Kesariya chalao\' → ["Search YouTube for Kesariya", "Click the 1st result in YouTube"]. ' +
@@ -238,8 +250,14 @@ export async function runCommand(said: string, deps: AgentDeps): Promise<AgentOu
               state,
             ).catch(() => null);
       if (second) deps.log?.(`agent: second opinion → ${second}`);
+      // A risky action still needs Jev itself to have chosen it, over the floor, and the writer to
+      // pick the same one on its own: "Notepad band karo" was close_windows at 0.69 with the writer
+      // agreeing, and nothing was done.
       const agreed = actions.find(
-        (candidate) => candidate.id === second && !candidate.risky && candidate.available !== false,
+        (candidate) =>
+          candidate.id === second &&
+          candidate.available !== false &&
+          (!candidate.risky || (candidate.id === choice && confidence >= AGREED_RISKY_CONFIDENCE)),
       );
       if (!agreed) {
         // Partway through, a guess is still not a reason to act; what is done stays done.

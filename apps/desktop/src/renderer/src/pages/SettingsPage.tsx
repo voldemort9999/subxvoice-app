@@ -1,6 +1,7 @@
 import { HotkeyNote, MicrophoneNote, PermissionsIntro } from "@platform/Chrome";
 import type { WritingTone } from "@subx/core";
 import type { AppInfo, UpdateState } from "../../../shared/ipc";
+import { followKey } from "../shared/follow";
 import { hotkeyLabel } from "../shared/format";
 import { HotkeyRecorder } from "../shared/HotkeyRecorder";
 import { useAccount, useMicrophones, useSettings, useUpdate } from "../shared/hooks";
@@ -28,9 +29,38 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
   const account = useAccount();
   const update$ = useUpdate();
   const hotkey = settings?.hotkey ?? info?.hotkeys[0]?.keys ?? "";
+  // Shown only where Follow My Words runs. A key equal to the dictation key is ignored by the app,
+  // so the clash is said here rather than left to look like a dead key.
+  const follows = Boolean(followKey(info)) || Boolean(settings?.commandHotkey);
+  const askKey = settings?.commandHotkey || followKey(info) || "ctrl+alt";
+  const sameKey = sameChord(askKey, hotkey);
 
   return (
     <div className="space-y-10">
+      {info?.customHotkeys && follows && (
+        <Section title="Follow My Words">
+          <Field
+            label="Key"
+            hint="Hold, say what you need done, let go. Press any other key while holding to cancel."
+          >
+            <HotkeyRecorder
+              value={askKey}
+              presets={[
+                ...new Set(["ctrl+alt", ...info.supportedKeys.filter((keys) => !sameChord(keys, hotkey))]),
+              ]}
+              onChange={(keys) => update({ commandHotkey: keys })}
+            />
+            {sameKey && (
+              <div className="mt-3">
+                <Notice role="alert">
+                  This is also the dictation key, so it will dictate. Pick a different one.
+                </Notice>
+              </div>
+            )}
+          </Field>
+        </Section>
+      )}
+
       <Section title="Dictation">
         <Field
           label="Hotkey"
@@ -78,7 +108,14 @@ export function SettingsPage({ info }: { info: AppInfo | null }) {
           )}
         </Field>
 
-        <Field label="Microphone" hint={`Used while you hold ${hotkeyLabel(hotkey)}.`}>
+        <Field
+          label="Microphone"
+          hint={
+            follows
+              ? `Used while you hold ${hotkeyLabel(askKey)} or ${hotkeyLabel(hotkey)}.`
+              : `Used while you hold ${hotkeyLabel(hotkey)}.`
+          }
+        >
           {/* With a native mic (Mac) the system input device is used, so the picker would do nothing. */}
           {info && !info.nativeMicrophone && (
             <Select
@@ -267,4 +304,10 @@ function EngineStatus({ ready, name }: { ready: boolean | undefined; name: strin
       </span>
     </p>
   );
+}
+
+/** "alt+ctrl" and "ctrl+alt" are the same chord — the main process compares them the same way. */
+function sameChord(a: string, b: string): boolean {
+  const norm = (keys: string) => keys.toLowerCase().split("+").sort().join("+");
+  return norm(a) === norm(b);
 }

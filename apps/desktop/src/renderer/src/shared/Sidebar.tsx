@@ -39,12 +39,15 @@ export function Sidebar({
   page,
   onNavigate,
   hotkey,
+  followKey,
   ready,
   usage,
 }: {
   page: PageId;
   onNavigate: (page: PageId) => void;
   hotkey: string;
+  /** The Follow My Words key; absent where it cannot run. */
+  followKey?: string;
   ready: boolean;
   usage: Usage | null;
 }) {
@@ -103,15 +106,21 @@ export function Sidebar({
             className={`h-2 w-2 rounded-full ${ready && !exhausted ? "bg-marigold" : "border border-side-soft"}`}
             aria-hidden="true"
           />
-          {exhausted ? "Daily limit reached" : ready ? "Ready to dictate" : "Setup needed"}
+          {exhausted ? "Daily limit reached" : ready ? "Ready" : "Setup needed"}
         </p>
         {exhausted ? (
-          <p className="mt-2 text-side-soft">Dictation is back tomorrow.</p>
+          <p className="mt-2 text-side-soft">Back tomorrow.</p>
         ) : ready ? (
           <>
-            <p className="mt-2.5 flex items-center gap-2 text-side-soft">
-              Hold
+            {followKey && (
+              <p className="mt-2.5 flex items-center gap-2 text-side-soft">
+                <kbd className="kbd border-side-rule bg-side-rule text-side-ink">{followKey}</kbd>
+                to ask
+              </p>
+            )}
+            <p className="mt-2 flex items-center gap-2 text-side-soft">
               <kbd className="kbd border-side-rule bg-side-rule text-side-ink">{hotkey}</kbd>
+              to type
             </p>
             {usage && (
               <p className="mt-2 text-xs text-side-soft">{formatSpan(usage.remaining * 1000)} left today</p>

@@ -2,6 +2,19 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-14 — Command mode is called "Follow My Words", and it leads the product
+The user chose the name (from fifteen offered) and the positioning: SUBXVoice is presented as a
+helper you talk to while you work — voice typing taken further — not as a dictation app with an
+extra. The website and the app lead with Follow My Words (Ctrl + Alt) and keep dictation
+(Ctrl + Win) as a normal, smaller part. Claims stay to what was run through the shipped models:
+messages are shown as typed and left unsent, never sent. "Command" remains the word in code.
+
+### 2026-11-14 — A risky action Jev chose at 0.6–0.7 is done when the writer independently agrees
+"Notepad band karo" was `close_windows` at 0.69 with the writer agreeing, and nothing happened
+because risky actions needed Jev's own 0.7. Two models choosing the same action is now enough
+down to 0.6 (`AGREED_RISKY_CONFIDENCE`); at 0.5, where "band karo" splits between closing a
+window and killing a program, it stays refused.
+
 ### 2026-11-11 — The command writer moves from gemini-2.5-flash-lite to gemini-2.5-flash
 Screen control made plans longer (search, open the chat, type) and the planner's prompt grew a rule
 per failure. Flash-lite then broke a different command with each prompt change — "hi likho" typed

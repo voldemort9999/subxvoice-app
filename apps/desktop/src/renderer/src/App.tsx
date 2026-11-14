@@ -7,6 +7,7 @@ import { InsightsPage } from "./pages/InsightsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./pages/SignInPage";
+import { followKey } from "./shared/follow";
 import { hotkeyLabel } from "./shared/format";
 import { useAccount, useAppInfo, useTheme, useUsage } from "./shared/hooks";
 import { MoonIcon, SunIcon } from "./shared/icons";
@@ -29,6 +30,9 @@ export function App() {
   const info = useAppInfo();
   const usage = useUsage();
   const hotkey = hotkeyLabel(info?.hotkeys[0]?.keys);
+  // Absent where Follow My Words cannot run (macOS), and the UI then speaks of dictation alone.
+  const follow = followKey(info);
+  const followLabel = follow ? hotkeyLabel(follow) : undefined;
   // Dictation runs on the account's session, so without one there is nothing the app can do.
   const ready = Boolean(info?.providers.stt && account?.signedIn);
 
@@ -41,7 +45,14 @@ export function App() {
 
   return (
     <div className="flex h-full bg-page">
-      <Sidebar page={page} onNavigate={setPage} hotkey={hotkey} ready={ready} usage={usage} />
+      <Sidebar
+        page={page}
+        onNavigate={setPage}
+        hotkey={hotkey}
+        followKey={followLabel}
+        ready={ready}
+        usage={usage}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className={`flex h-16 shrink-0 items-end justify-between gap-4 px-8 pb-3 ${TITLE_BAR_DRAG}`}>
@@ -59,7 +70,9 @@ export function App() {
         <main className="scroll-area flex-1 overflow-y-auto">
           {/* Keyed by page so each one arrives with a short rise, answering the click that chose it. */}
           <div key={page} className="animate-arrive mx-auto max-w-5xl px-8 pt-4 pb-10">
-            {page === "dashboard" && <DashboardPage hotkey={hotkey} onNavigate={setPage} />}
+            {page === "dashboard" && (
+              <DashboardPage hotkey={hotkey} followKey={followLabel} onNavigate={setPage} />
+            )}
             {page === "insights" && <InsightsPage hotkey={hotkey} />}
             {page === "history" && <HistoryPage hotkey={hotkey} />}
             {page === "dictionary" && <DictionaryPage />}

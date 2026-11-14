@@ -529,6 +529,18 @@ describe("second opinion on the action", () => {
     expect(outcome.ok).toBe(false);
     expect(kill.calls).toHaveLength(0);
   });
+
+  it("does a risky action Jev chose at 0.69 when the writer chooses it too", async () => {
+    const close = action("close_windows", { risky: true, args: '{"close": string[]}' });
+    const outcome = await runCommand("Notepad band karo", {
+      decider: unsure("close_windows", { close_windows: 0.69, nothing_fits: 0.12, press_keys: 0.1 }),
+      writer: writer(plan("Close the window Notepad"), "close_windows", '{"close":["Notepad"]}'),
+      sources: [source([close, action("press_keys")])],
+      memory: new AgentMemory(),
+    });
+    expect(outcome.ok).toBe(true);
+    expect(close.calls).toHaveLength(1);
+  });
 });
 
 describe("continuing", () => {
