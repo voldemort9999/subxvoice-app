@@ -530,3 +530,108 @@ User decided:
 Open:
 - Onboarding's "Your keys" step was not captured in the preview (it needs a name typed first).
 - 0.4.1 is not installed on the dev machine (installed apps update themselves on next launch).
+
+---
+
+## S-018 · 2026-11-14 · Website pulled; the second demo video — everything decided so far, on hold for a new chat
+
+Asked:
+> jara muje docs aur context wala pure folder files jo haio sirf unka ek alag se zip file bana k download me do
+> Ab mujhe script banwani hai video ke liye … Banana mat, bas tumhein ready kar raha hoon script banwane ke liye.
+> pichli kuch aisi thi but wo abhi kisi kaam ki nahi abhi bahut kuch badal chuka hai
+> website ka jo code hai, vo maine apne doosre agent se liya tha … Code ko pull kar lo … agar tum video mein … screenshot render karvao … To updated UI ke ho
+> main chahta hoon ki video ek nayi chat mein hi banaun, to context update kar do … jis point pe ho tum video ke liye, script ko lekar … saari cheezein context mein likhna … Gyan AI ko lekar bhi do points the ki Gyan AI aur uska model bhi mention karna script mein
+
+Done:
+- Zipped `subxvoice/docs/`, `subxvoice/context/`, `subxvoice/CLAUDE.md`, `subxvoice/AGENTS.md`,
+  `pillow/CLAUDE.md` and `pillow/.claude/commands/` into
+  `C:\Users\BHAVESH\Downloads\SUBXVoice-docs-and-context-2026-11-14.zip` (14 files, 94 KB).
+- Answered: the website repo is `voldemort9999/subxvoice` (private), working copy
+  `pillow/subxvoice-web`, deployed by Vercel on push to `main`, connected to Lovable (never rewrite
+  pushed history).
+- **Pulled the website** (`git pull --ff-only`, clean tree): `d33e271` → **`86f926a`** "feat: both
+  keys lead the site, as equals", made by the user's other agent. The hero keeps "Keep working. /
+  Say the rest." but now shows two rows of the same shape — "Ask it to do it." (Ctrl + Alt) and
+  "Say it to type it." (Ctrl + Win) — each cycling real examples with a line for the moment in a
+  working day ("Your boss adds two tasks while you are in the middle of something." / "Someone
+  asks for your resume, and it is somewhere in Pictures." / "You remember you owe Aryan a reply. It
+  is typed in his chat; you only press send." / "A call is about to start and your earbuds are not
+  connected." / "You want a song on while you work." / on Ctrl + Win: a team reminder, a ChatGPT
+  prompt, a complaint form). How it works is "Two keys, one habit."; nav, footer, meta, Features
+  and FAQ give both keys equal weight. Those "moment" lines are ready-made video material
+  (`src/components/landing/Hero.tsx`).
+- Read the old video record (002 S-014 Part 1) and `pillow/subxvoice-video/script.txt`, and the
+  user's four screenshots of the challenge page and the old script. No script written: the user
+  asked for preparation only, then asked for this entry so a new chat can make the video.
+
+Established — the challenge (from the user's screenshots, 2026-11-14):
+- **Gnani AI's "The Great Indian AI Internship Challenge. Build Sovereign AI for India."** —
+  "Build on Gnani AI's own models and compete for paid internships." Up to 100 paid six-month
+  internships; up to ₹1 lakh stipend per intern per month; ₹5 lakh in awards, ten of ₹50,000.
+  Open to enrolled students in India aged 18+, solo or a team of two. The page still shows the
+  original deadline "Nov 10, 2026, 11:59 PM IST" but its countdown read **0d 07h 21m** when the
+  user captured it on 2026-11-14; the user called **2026-11-14 the final day**.
+- **Ten awards**: 01 Main Character (regional / low-resource Indian language); 02 **Mixed Vibes**
+  (best code-mixed voice experience — Hinglish, Tanglish, Benglish); 03 **Real Deal** (most useful
+  real-world problem solved); 04 Noise Canceller (messy telephonic audio); 05 Two-Person Army
+  (team of two); 06 Solo Ninja (single participant); 07 **Jugaad Genius** (most creative or
+  unexpected use of Gnani AI's models); 08 Small Town, Big Build (Tier 2/3 college or city); 09
+  **Demo Day Drop** (best **60-second** demo video); 10 **Crowd Favourite** (public votes on
+  LinkedIn and X with #GreatIndianAIInternshipChallenge and #GnaniAI).
+- Starting-point ideas on the page (not requirements): a Kannada helpline for farmers, a Hinglish
+  voice assistant taking kirana orders, a noisy-call summariser, a Tamil voice tutor.
+- **Gnani's models**, "Models trained in India, for Indian speech", together "Artha, the
+  sovereign stack": **Prisma v2.5** — speech to text, trained on 14M+ hours of telephonic audio,
+  streams in under 200 ms across 10+ Indian languages plus Hinglish, Tanglish and Benglish;
+  **Timbre v2.5** — text to speech, beta, 10+ Indic languages; **Evon v3.3** — reasoning, open
+  weight, 30B mixture-of-experts, 128K context, 11 Indian languages, Apache 2.0.
+- **What SUBXVoice actually uses from Gnani: speech to text only.** The app's model is
+  `prisma-v3.0` (`DEFAULT_MODEL` in `packages/providers/src/stt/gnani.ts`; production reads no
+  `.env`), while the challenge page names Prisma v2.5. Planning and choosing in Follow My Words are
+  **Gemini 2.5 Flash and TypeSafe's Jev** via OpenRouter, and the rewrite is gpt-oss-120b — not
+  Gnani. The script must not claim the whole thing runs on Gnani.
+
+User decided — the video (so far):
+- **Length: about 1 min 45 s** ("laghbag koshis ki exact 1 minutes 45 secs") — roughly 250–270
+  spoken words. This is longer than Demo Day Drop's "60-second" wording; the user chose it after
+  being told.
+- **The old script is not to be reused** ("abhi kisi kaam ki nahi") — it was a dictation story
+  (typing 40 wpm vs speaking 150, the 200-word email, "Kal meeting hai…", Ctrl + Win, email and
+  WhatsApp writing, setup, dashboard, download). It is still in `pillow/subxvoice-video/script.txt`.
+- **Gnani must be mentioned, with its model**: one line saying SUBXVoice was built for Gnani AI's
+  challenge, and that Gnani's model does the hearing. My recommendation, not yet confirmed: say
+  "Gnani's Prisma" with no version, because the app runs `prisma-v3.0` and the page says v2.5.
+- **No team talk** — no members, solo or duo; just the one Gnani line.
+- **Award angles to serve: Jugaad Genius, Mixed Vibes, Real Deal, Crowd Favourite** — which leads
+  is to be discussed later ("baad me bhi disscus kare ge").
+- **Production method: to be discussed later.** Options put to the user: (a) the user
+  screen-records the real app shot by shot from a shot list, assembled in Remotion with voiceover,
+  captions and titles; (b) all in Remotion from screenshots and animation, like the first video;
+  (c) script and shot list only.
+- Standing content rules that apply: show only what was verified (the examples on the site are
+  real model plans and the app's own reports); WhatsApp messages are typed and **never sent**;
+  position it as a helper while you work, voice typing taken further — never "it runs your whole
+  computer"; never name Wispr Flow; write under the unslop rules (no "seamless", "next level",
+  stock hype); feature name **Follow My Words** on Ctrl + Alt, **Dictation** on Ctrl + Win.
+  From the first video: all on-screen text in English, Hinglish in Roman letters; music added by
+  the user.
+
+Open — exactly where this stopped:
+- **Not yet decided, ask first in the new chat:** (1) the weight between the two keys — the user
+  said on 2026-11-14 that Follow My Words should be 60–80% and dictation "normal", but their
+  other agent has since made the website give both keys **equal** weight (`86f926a`); my question
+  on this was declined before it was answered; (2) which award angle leads; (3) production method;
+  (4) voice — the first video used ElevenLabs "Hope - upbeat and clear"; (5) Prisma version wording.
+- Ideas formed, not agreed: open on the website's "moment in a working day" lines as the hook;
+  show each Follow My Words request with the pill reporting what was done; the WhatsApp beat must
+  end on "left unsent"; close on subxvoice.vercel.app, free in beta.
+- Assets for the video: the Remotion project `pillow/subxvoice-video/` (Remotion 4.0.542, npm, not
+  a git repo; `src/timing.ts` places scenes on SRT phrases, `src/parts.tsx` holds palette, Mark,
+  Waveform, Key, Pill, AppWindow; `src/Demo.tsx` 14 scenes; render `npm run render`). App
+  screenshots: the renderer preview harness in `subxvoice/reference/video-preview/` — its
+  `vite.config.mjs` and `shot.sh` point at an old scratchpad and need re-pointing, `stub.js`
+  imports a `history.json` that must be supplied, and for 0.4.1 the stub's `app.info().hotkeys`
+  must include `{ keys: "ctrl+alt", mode: "command" }` and settings `commandHotkey: "ctrl+alt"`,
+  or the Follow My Words panel does not appear. Website screenshots: `npx vite dev` in
+  `subxvoice-web` (not `vite preview`, which fails on the Vercel build), headless Edge with
+  `--force-prefers-reduced-motion` (or sections stay blank) and width ≥ 500 px.
