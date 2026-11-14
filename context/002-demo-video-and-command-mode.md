@@ -461,3 +461,72 @@ Done:
 Established:
 - The repo is fully committed: `subxvoice-app` `main` at `9fe35f6` (journal) on top of
   `ab3949b` (0.4.0), nothing uncommitted.
+
+---
+
+## S-017 · 2026-11-14 · "Follow My Words" leads the site and the app; 0.4.1
+
+Asked:
+> UAC dialog … jab need padegi, to karo hi, lekin abhi decision ho to mat karo
+> Gyan AI … internship program … Aaj hi submission ka final day hai
+> main chahunga ki isko badhiya tareeke se dikhayein … 60-80% jo hai, naye feature ko buri tarah highlight karna hai … Control plus Windows … normally uske baare mein baat karni hai
+> multitasking ke waqt ek helping assistant … poora computer hi tere voice command pe chalwaye. Wo hum train hi nahi karna chahte
+> WhatsApp wale mein aisa mat dikhana ki hum send kar denge
+> alag-alag filters … Windows ke through saare kaam … Bluetooth … volume … browser … YouTube
+> Whisper Flow jaisa hai, and humne isko next level pe leke gaye hain … Aisa likhna nahi hai
+> skill … https://github.com/theclaymethod/unslop
+> follow my words hi rkah do yar
+
+Done:
+- Asked first: the writing skill (user gave `theclaymethod/unslop`), the pitch (user described the
+  multitasking-helper framing), limits on the site ("Sirf taakat dikhao"), app scope (dashboard,
+  onboarding, Settings key, 0.4.1). Name: offered 15, user chose **Follow My Words**.
+  → `docs/decisions.md` 2026-11-14.
+- Read unslop (`SKILL.md`, `references/core-contract.md`), cloned to the scratchpad; ran its
+  `banned_phrase_scan`, `structure_scan`, `silhouette_scan` on the extracted site copy: 0 hard
+  hits; one soft fragment fixed ("Not sent. It waits for you." → one sentence).
+- Every site example was run through the real models first with a dry harness (a copy of
+  `command.live.test.ts` with every effectful action recorded, open_app included; deleted after).
+  13 of 16 planned right. Fixed the three that did not (below), re-ran: right.
+- Website (`subxvoice-web` `d33e271`, live on subxvoice.vercel.app ~80 s after push): hero "Keep
+  working. / Say the rest." with a Ctrl + Alt demo stepping through the WhatsApp message (typed,
+  left unsent); new `FollowMyWords.tsx`, the page's one dark section, with tabs Messages, Notes,
+  Files, Your PC, Apps & windows, Browser — said line + the app's own report; How it works for
+  asking; dictation as "When you need to type: Ctrl + Win." (`#dictation`); Writing moved to the
+  light page; Features, Privacy (what Follow My Words reads; runs without admin), Download, FAQ,
+  footer, nav, meta; privacy policy section "When you use Follow My Words"; terms section "What
+  Follow My Words does for you" (check what it did; sending is always yours).
+- App (`subxvoice-app` `8418f9c`, **0.4.1 released**, `latest.yml` 0.4.1): dashboard leads with a
+  dark Follow My Words panel and eight "Try saying" lines (`renderer/src/shared/follow.ts`);
+  sidebar shows "Ctrl + Alt to ask / Ctrl + Win to type"; Settings has a Follow My Words key
+  (`commandHotkey`, which already existed in settings but had no UI) with a clash warning;
+  onboarding step "Your keys" sets both. Checked in the renderer preview harness (recreated in the
+  scratchpad: stub with a `command` binding).
+- Loop: planner examples for "Google pe … search karo" and "YouTube pe … channel search karo";
+  `AGREED_RISKY_CONFIDENCE` 0.6 → `docs/decisions.md`. Core 102 tests.
+
+Did not work:
+- Dry run: "Google pe aaj ka weather search karo" planned "open google.com, type in its box,
+  Enter"; the next command "YouTube pe Kahani YT channel search karo" then planned typing into
+  *Google's* box (continuation from the previous command). Fixed with explicit examples.
+- "Notepad band karo" → close_windows 0.69, writer agreed, refused (risky floor 0.7). Fixed by
+  the agreement rule; the old 0.5 kill_process refusal test still holds.
+- The writing skill was not in the journal or on disk; `remove-ai-marks` in the synced skills is
+  an AI-watermark stripper, not a writing guide — not used.
+- `console.log` inside the vitest harness printed nothing (again); logged to a file via `OUT`.
+- `vite preview` of the website fails (`dist/server/server.js` not found — the build targets
+  Vercel's output); `vite dev` used for screenshots. Headless Edge cannot go below ~500 px wide,
+  so a 390 px shot looks clipped; 500 px is the real check. Reveal sections are blank in headless
+  shots unless `--force-prefers-reduced-motion`.
+- `subxvoice-web` lint: 263 CRLF errors remain in untouched files (`Waveform.tsx`,
+  `primitives.tsx`, `contact.tsx`) — the checkout has `core.autocrlf=true`; changed files were
+  run through prettier and are clean.
+
+User decided:
+- UAC: not now; add it when a need appears.
+- Name **Follow My Words**; positioning as a helper while you work, voice typing taken further,
+  never "runs your whole computer"; site shows strengths only; WhatsApp shown as typed, not sent.
+
+Open:
+- Onboarding's "Your keys" step was not captured in the preview (it needs a name typed first).
+- 0.4.1 is not installed on the dev machine (installed apps update themselves on next launch).

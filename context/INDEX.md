@@ -7,13 +7,17 @@ Where things live: this journal is `subxvoice/context/`; the `/context-read` and
 commands are one level up at `pillow/.claude/commands/`, because Claude Code is rooted at `pillow/`
 and that folder is not a git repository. See `subxvoice/CLAUDE.md` → "Context system".
 
-Last updated: 2026-11-14 · after S-016 · `subxvoice-app` `main` at `9fe35f6` (0.4.0 is `ab3949b`),
-**nothing uncommitted** · website `main` at `6fdf2c4`, unchanged · current journal file **`002`**
-(463 lines; `001` closed at 992).
+Last updated: 2026-11-14 · after S-017 · `subxvoice-app` `main` (0.4.1 is `8418f9c`), nothing
+uncommitted · website `main` at `d33e271`, live · current journal file **`002`** (~540 lines;
+`001` closed at 992).
 
 ## Where things stand
 
-**SUBXVoice 0.4.0 is released (2026-11-14) and live everywhere.** The release `v0.4.0` on
+**SUBXVoice 0.4.1 is released (2026-11-14) and live everywhere; command mode is now called
+"Follow My Words" and leads both the website and the app** (S-017, `docs/decisions.md`).
+The site opens on "Keep working. / Say the rest.", a dark Follow My Words section with real
+examples by kind, and dictation (Ctrl + Win) as a normal section; the app's dashboard leads with
+a Follow My Words panel, Settings has its key, onboarding sets both keys. Before that, 0.4.0: The release `v0.4.0` on
 `subxvoice-releases` carries the installer (113,214,013 bytes), its blockmap and `latest.yml`; the
 website's download button (`subxvoice-web/src/lib/download.ts`, a `releases/latest/download/` link)
 serves it; every 0.3.0 install auto-updates to it. The website needed no change — it names no
@@ -95,6 +99,7 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 | **Command mode: design, loop, screen control, waits, WhatsApp, files, Bluetooth, images probe** | **`docs/command-mode.md`** |
 | Stuck "•••" pill (press race, watchdog); Roman retry | `docs/architecture.md`, 002 (S-015 Part 3, S-016) |
 | The 0.4.0 release: smoke test, publish, verification, UAC question | 002 (S-016) |
+| Site and app copy for Follow My Words; unslop; dry-run of site examples; preview harness | 002 (S-017) |
 | Command mode user tests 1–9: what failed and each fix | 002 (S-014 part 4, S-015, S-016) |
 | Invisible Explorer windows (`windowsHide`), `CmdBluetooth` | `docs/command-mode.md`, 002 (S-016) |
 | UIA3 in C#, WhatsApp/YouTube tree facts, Jev element accuracy | `docs/command-mode.md`, 002 (S-015 Part 2) |
@@ -121,9 +126,7 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
   cell → crop with a finer grid → Jev again → click only above a floor; used only when the tree
   finds nothing. Start from `reference/command-tests/grid.ps1` / `jev-image.mjs`; needs
   `DecisionRequest.state` to carry an image part. Go-ahead not given.
-- **UAC prompt in the installer** — asked for on 2026-11-14; not done: nothing needs admin, the
-  installer is per-user (a per-machine one would strand every existing install's updates), and an
-  elevated app cannot receive key presses (UIPI). Waiting on the user.
+- ~~UAC prompt in the installer~~ — the user: not now, only when a need appears (S-017).
 - **Language picker** (fixed to hi-IN) — deferred by the user.
 - **Per-device quota, or leave account-hopping open?** Unanswered since S-010.
 - ~~Confirm risky actions~~ — no "pakka?". ~~Send messages~~ — never, unless asked separately.
@@ -170,3 +173,4 @@ Three repos, and confusing them is the easy mistake: `subxvoice-app` holds the a
 | S-014 | 2026-11-10 → 11-11 | Demo video; command mode researched, built, first test, loop rewritten | 002 |
 | S-015 | 2026-11-11 → 11-12 | All Windows actions; screen control (UIA3 + Jev); eight user tests; stuck pill root cause | 002 |
 | S-016 | 2026-11-14 | Invisible folders; Bluetooth devices; Roman retry; live suites; **0.4.0 released** | 002 |
+| S-017 | 2026-11-14 | "Follow My Words" named; site and app lead with it; **0.4.1 released** | 002 |
