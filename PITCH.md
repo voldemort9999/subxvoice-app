@@ -28,7 +28,7 @@ SUBXVoice sits in the tray. You hold a key, speak, and let go, without leaving t
 | Feeling unwell | "boss ko email likho ki kal mujhe chhutti chahiye, tabiyat theek nahi hai" | A full leave email in English, with subject, body and your name |
 | Running late | "WhatsApp pe Aryan ko likho aaj main nahi aa paunga" | The chat opens and the message is typed. **It is never sent for you** |
 | Message home | "mummy ko message bhejo ki main aaj khana bahar kha lunga" | "Mummy, aaj main bahar hi khana kha lunga." It stays in the language you spoke |
-| A student's study break | "YouTube pe Kesariya chalao" · "brightness 60% kar do" | The song plays and the screen dims |
+| A student's study break | "YouTube pe Kesariya chalao" · "brightness 60% kar do" | The song plays and the screen is set to 60% |
 | Using an AI tool | "ek React pricing table banao, teen tier ka, middle wala highlighted" | The prompt is typed into the ChatGPT box |
 | A refund form | "mera order kal aaya tha lekin box mein charger nahi tha" | The complaint is written into the form field |
 
