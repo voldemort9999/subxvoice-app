@@ -37,7 +37,7 @@ Every word SUBXVoice acts on is heard by **Prisma**, Gnani AI's speech model tra
 ## How it works
 
 Prisma turns your speech into text. A planner breaks the text into steps, and Windows carries them out. Inside apps, the planner reads on-screen names as text and takes no screenshots. Dictation pastes the text, in Roman letters or Devanagari, where your cursor is, and it never translates.
-<sub>The planning and writing run on general LLMs: Gemini 2.5 Flash, Jev and gpt-oss-120b.</sub>
+The planning and writing run on general LLMs: Gemini 2.5 Flash, Jev and gpt-oss-120b.
 
 ## Safe and shipped
 
