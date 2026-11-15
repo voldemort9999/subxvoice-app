@@ -1,54 +1,62 @@
-# SUBXVoice — say it, and keep working
+# SUBXVoice — keep working, say the rest
 
-**A voice helper for Windows that understands Hindi, English and both in one sentence, and acts on what it hears.**
-Built on Gnani AI's **Prisma** speech model for the Great Indian AI Internship Challenge by Bhavesh Parmar and Aarnav Mathakiya.
+**A voice helper for Windows that understands Hindi, English, or both in one sentence, and acts on what it hears.**
+Built by Bhavesh Parmar and Aarnav Mathakiya on Gnani AI's **Prisma** speech model, for the Great Indian AI Internship Challenge.
 
 **Try it:** [subxvoice.vercel.app](https://subxvoice.vercel.app) (free, Windows 10 and 11) · **Code:** [github.com/voldemort9999/subxvoice-app](https://github.com/voldemort9999/subxvoice-app)
 
 ## The problem
 
-A working day breaks into small jobs. Your boss adds two tasks in the middle of a report, someone needs your resume, a call starts before your earbuds are connected, a reply is owed on WhatsApp. None of it is hard, but each one means stopping, clicking through windows and coming back, and by then the thought you were holding is gone.
+A working day keeps breaking into small jobs. Your boss adds two tasks in the middle of a report, someone needs your resume, a call starts before your earbuds are connected, and a reply is owed on WhatsApp. None of it is hard, but each job means stopping, clicking through windows and coming back, and by then the thought you were holding is gone.
 
-Voice could take those jobs. But PC voice tools mostly type what you say rather than act on it, and they expect one language at a time. Many of us speak the way we think: *"kal meeting hai, slides ready rakhna"* is a single sentence.
+We speak much faster than we type, yet PC voice tools mostly type what you say rather than act on it. They also expect one language at a time, while much of India speaks the way it thinks. *"Kal meeting hai, slides ready rakhna"* is one sentence. Typing is also a barrier in itself for many people, such as parents writing to family or anyone who never learned to type fast.
 
-## The solution
+## The solution: two keys, no window
 
-SUBXVoice sits in the tray and waits for one of two keys. There's no window to open first.
+SUBXVoice sits in the tray. You hold a key, speak, and let go, without leaving the app you're in.
 
-**Follow My Words** (hold Ctrl + Alt): say what you need, and it gets done in front of you.
+- **Follow My Words** (hold Ctrl + Alt) does what you ask on the PC, in front of you.
+- **Dictation** (hold Ctrl + Win) types what you say at the cursor, in any app you can paste into. Ask for an email or a message and it writes the finished thing in the tone you chose.
 
-| You say | It does |
-|---|---|
-| "Notepad kholo aur aaj ke tasks likho: client ko call karna, report bhejna" | Opens Notepad and types the list: one sentence, two planned steps |
-| "Pictures wale folder mein mera resume dhoondo" | Opens Pictures with `My Resume.pdf` selected |
-| "WhatsApp pe Aryan ko likho aaj main nahi aa paunga" | Finds the chat and types the message, then stops. **Sending is always yours** |
-| "OnePlus Buds connect karo" · "brightness 60% kar do" · "YouTube pe Kesariya chalao" | Connects the earbuds, sets the screen, plays the first result |
+## A day with it
 
-**Dictation** (hold Ctrl + Win): speak, let go, and your words are typed at the cursor in any app you can paste into, such as Gmail, Word, a form or a ChatGPT box. Hindi comes out in Roman letters ("main theek hoon") or Devanagari, and it is never translated. Ask for an email in one line, and you get the full email in the tone you chose.
+| Moment | You say | What happens |
+|---|---|---|
+| Boss adds work mid-report | "Notepad kholo aur aaj ke tasks likho: client ko call karna, report bhejna" | Notepad opens and the list is typed: one sentence, two planned steps |
+| HR asks for your resume | "Pictures wale folder mein mera resume dhoondo" | Pictures opens with `My Resume.pdf` selected |
+| A call is about to start | "OnePlus Buds connect karo" | The paired earbuds connect |
+| Feeling unwell | "boss ko email likho ki kal mujhe chhutti chahiye, tabiyat theek nahi hai" | A full leave email in English, with subject, body and your name |
+| Running late | "WhatsApp pe Aryan ko likho aaj main nahi aa paunga" | The chat opens and the message is typed. **It is never sent for you** |
+| Message home | "mummy ko message bhejo ki main aaj khana bahar kha lunga" | "Mummy, aaj main bahar hi khana kha lunga." It stays in the language you spoke |
+| A student's study break | "YouTube pe Kesariya chalao" · "brightness 60% kar do" | The song plays and the screen dims |
+| Using an AI tool | "ek React pricing table banao, teen tier ka, middle wala highlighted" | The prompt is typed into the ChatGPT box |
+| A refund form | "mera order kal aaya tha lekin box mein charger nahi tha" | The complaint is written into the form field |
+
+## Built for Indian languages
+
+- **Code-mixed by default.** Switch between Hindi and English mid-sentence on either key and it keeps up. Hindi is typed in Roman letters, the way people type in chat, or in Devanagari if you prefer. **It never translates you.**
+- **Ten languages in the speech layer.** The Prisma integration accepts Bengali, Gujarati, Hindi, Kannada, Malayalam, Marathi, Punjabi, Tamil, Telugu and Indian English.
+- **One language fixed, for now, on purpose.** We tested Prisma's automatic language detection, and on a Hinglish clip it guessed Telugu. So the app fixes the language to Hindi-English, which handles the mix correctly. The next release adds a picker, so a Tamil, Bengali or Marathi speaker chooses their own language, and each language is tested before it ships.
+- **Holds up with noise around.** It's tested with real background noise, and a personal dictionary teaches it names it keeps mishearing.
 
 ## How it works
 
-1. **Hearing, by Gnani Prisma.** The mic opens on key-down and streams to Prisma while you talk, so letting go only waits for the last words. Prisma serves both keys and keeps up with mid-sentence switches.
-2. **Planning.** Gemini 2.5 Flash turns the sentence into ordered steps before anything runs, and a decisions model (Jev) picks the action or on-screen element for each step. If a step can't be done, the app stops and says which one.
-3. **Doing.** Windows settings, apps, files and Bluetooth are handled through Windows directly. Inside apps it reads the on-screen names (chats, video titles) as text through UI Automation, and takes no screenshots.
-4. **Writing.** A personal dictionary fixes names that keep being misheard, and gpt-oss-120b writes the Roman script, emails and messages.
+1. **Hearing (Gnani Prisma).** The mic opens on key-down and streams to Prisma while you talk, so letting go only waits for your last words.
+2. **Planning.** Gemini 2.5 Flash turns the sentence into ordered steps before anything runs. A decisions model (Jev) picks the action or on-screen element for each step. If a step can't be done, the app stops and says which one.
+3. **Doing.** Settings, apps, files and Bluetooth go through Windows directly. Inside apps such as WhatsApp or YouTube, it reads on-screen names as text through UI Automation, and it takes no screenshots.
+4. **Writing.** gpt-oss-120b writes the Roman script and drafts emails and messages. The text is pasted where your cursor was.
 
-## Why it matters
+## Safe by design
 
-- **It keeps people in their work.** One sentence replaces a detour through windows and settings.
-- **It speaks the way India speaks.** Hindi and English mixed is the normal case on both keys.
-- **It lowers the bar to typing.** Anyone who types slowly can still write an email, fill a form or prompt an AI tool.
-- **It is safe by design.**
-  - It never sends a message on its own.
-  - The mic is on only while a key is held.
-  - Transcripts stay on the computer.
-  - It needs no admin rights and keeps no API keys on the machine.
+- It never sends a message on its own.
+- The mic is on only while a key is held.
+- Transcripts and recordings stay on your computer.
+- It needs no admin rights, and no API keys sit on your machine.
 
 ## Where it stands
 
-**Shipped:** version 0.4.2 is live, with a public installer and automatic updates. The free beta gives two hours of listening a day.
+Version **0.4.2** is live, with a public installer and automatic updates, and the free beta includes two hours of listening a day. Next on the list:
 
-**Next:**
-- a language picker, so more of the Indian languages Prisma supports can be used (today the app is set to Hindi and English);
-- the macOS build, which is already running;
+- the language picker;
+- the macOS build, which already runs;
 - support for apps that draw their own screen, such as games.
