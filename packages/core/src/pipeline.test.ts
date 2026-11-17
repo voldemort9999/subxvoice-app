@@ -190,14 +190,34 @@ describe("Pipeline", () => {
       expect(llm.requests).toEqual([]);
     });
 
-    it("costs nothing when the speech was already in Latin letters", async () => {
-      const llm = new FakeLlm("should not be called");
-      const { pipeline, inserter } = setup("hello there", llm);
+    // English goes through the model too: that is where misheard words are repaired and the
+    // chat style applied. Whatever the model returns is tidied: no full stops.
+    it("sends English through the model as well, and tidies the reply", async () => {
+      const llm = new FakeLlm("hello there. see you at 2.30.");
+      const { pipeline, inserter } = setup("Hello there. See you at 2.30.", llm);
+
+      await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+      expect(llm.requests).toHaveLength(1);
+      expect(inserter.inserted).toEqual(["hello there see you at 2.30"]);
+    });
+
+    it("types English as heard, with nothing to report, when there is no model", async () => {
+      const { pipeline, inserter, history } = setup("hello there");
 
       await pipeline.process(audio, "exact", {}, { script: "roman" });
 
       expect(inserter.inserted).toEqual(["hello there"]);
-      expect(llm.requests).toEqual([]);
+      expect(history.records[0]?.rewriteError).toBeUndefined();
+    });
+
+    it("gives the model the user's dictionary words", async () => {
+      const llm = new FakeLlm("SUBXVoice khol do");
+      const { pipeline } = setup("सब एक्स वॉइस खोल दो", llm);
+
+      await pipeline.process(audio, "exact", {}, { script: "roman" });
+
+      expect(llm.requests[0]?.system).toContain("SUBXVoice");
     });
 
     // The user's words are the one thing we must never lose.
@@ -288,19 +308,26 @@ describe("Pipeline intent", () => {
   function composing(spoken: string, written: string, intent: DeciderProvider | undefined) {
     const inserter = new FakeInserter();
     const history = new MemoryHistory();
+    const llm = new FakeLlm(written);
     const pipeline = new Pipeline({
       stt: new FakeStt(spoken),
-      llm: new FakeLlm(written),
+      llm,
       decider: intent,
       inserter,
       history,
       dictionary: new MemoryDictionary([]),
     });
-    return { pipeline, inserter, history };
+    return { pipeline, inserter, history, llm };
   }
 
   /** Asks for an email without any trigger phrase, so only the classifier can notice. */
   const ASK = "mujhe apne manager ko kal ki chhutti ke baare mein likhna hai";
+  /**
+   * Dictation also goes through the model now (to repair mishearings and apply the chat style), so
+   * "the user's words win" means: it was asked to clean up dictation, never to write an email.
+   */
+  const asDictation = (llm: FakeLlm) =>
+    expect(llm.requests.every((r) => /clean up dictation/.test(r.system))).toBe(true);
   /** The literal trigger phrase, which skips the classifier entirely. */
   const TRIGGERED = "write an email to my manager about tomorrow's leave";
 
@@ -313,9 +340,9 @@ describe("Pipeline intent", () => {
 
   it("types what was said when the classifier is unsure", async () => {
     // Below the threshold the user's words win, because composing by mistake destroys them.
-    const { pipeline, inserter, history } = composing(ASK, "an invented email", decider("email", 0.4));
+    const { pipeline, history, llm } = composing(ASK, "an invented email", decider("email", 0.4));
     await pipeline.process(audio, "exact", {});
-    expect(inserter.inserted).toEqual([ASK]);
+    asDictation(llm);
     expect(history.records[0]?.intent).toBe("dictation");
   });
 
@@ -326,15 +353,16 @@ describe("Pipeline intent", () => {
         throw new Error("decisions endpoint down");
       },
     };
-    const { pipeline, inserter } = composing(ASK, "an invented email", broken);
+    const { pipeline, history, llm } = composing(ASK, "an invented email", broken);
     await pipeline.process(audio, "exact", {});
-    expect(inserter.inserted).toEqual([ASK]);
+    asDictation(llm);
+    expect(history.records[0]?.intent).toBe("dictation");
   });
 
   it("types what was said when there is no classifier at all", async () => {
-    const { pipeline, inserter, history } = composing(ASK, "an invented email", undefined);
+    const { pipeline, history, llm } = composing(ASK, "an invented email", undefined);
     await pipeline.process(audio, "exact", {});
-    expect(inserter.inserted).toEqual([ASK]);
+    asDictation(llm);
     expect(history.records[0]?.intent).toBe("dictation");
   });
 

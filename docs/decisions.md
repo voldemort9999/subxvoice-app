@@ -2,6 +2,27 @@
 
 Newest first. Add an entry whenever you pick one option over another — one short paragraph, with the why.
 
+### 2026-11-16 — Dictation is written like a chat message, and every Roman dictation goes to the model
+The user found the old dictation output poorly written. It added formal capitals and full stops
+everywhere, and it turned each "।" that Gnani puts at a pause into a full stop. It also kept
+misheard words. The new `dictationPrompt` draws on the user's own history and on VoiceInk's and
+OpenWhispr's cleanup prompts. It repairs a misheard word only when a sound-alike is more likely
+than the word as heard (the user's bar: "more than half sure"). It writes every Indian language
+phonetically in Latin letters and never translates. Its style: no full stops, few commas, a
+question mark only on a real question, lowercase except names. `tidyDictation` enforces the
+punctuation after the model. English now goes to the model too, which costs it about a second, so
+that misheard words and the style are fixed there as well. Emails and messages are unchanged: the
+user will work on them separately.
+
+### 2026-11-16 — Dictation rewriting races Gemini 3.5 Flash Lite against gpt-oss-120b
+The user asked for Gemini 3.5 Flash Lite, pinned to Google's priority tier
+(`only: ["google-ai-studio/priority", "google-vertex/global/priority"]`; OpenRouter answers 404
+for an unknown tag, so the pin is real). gpt-oss-120b on Groq is the backup. `RaceLlm` asks the
+backup only if Flash Lite has not answered within 1.5 s, or has failed, and types whichever
+answers first. Measured: Flash Lite took 0.7–1.1 s, gpt-oss 0.4–1.1 s. A race means the loser's
+request is also paid for. Follow My Words keeps its own model (`writer`) and is not part of the
+race.
+
 ### 2026-11-14 — Creating an account signs you in
 Sign-up used to sign straight back out and return the user to the sign-in form, so that they
 would use the new password at once. New users read the bounce as a failed sign-up, typed their

@@ -33,13 +33,14 @@ export {
 } from "./pipeline";
 export {
   type ComposeOptions,
+  dictationPrompt,
   emailPrompt,
   INTENT_CRITERIA,
   INTENT_QUESTION,
   messagePrompt,
   needsTransliteration,
   styleRewritePrompt,
-  transliteratePrompt,
+  tidyDictation,
 } from "./prompts";
 export { type CommandTrigger, DEFAULT_TRIGGERS, type Route, Router } from "./router";
 export { applyDictionary, applyRules, normalizeSpacing } from "./rules";

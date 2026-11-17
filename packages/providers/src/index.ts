@@ -76,6 +76,7 @@ function requireToken(config: ProviderConfig, name: string): TokenSource {
 }
 
 export { OpenRouterLlm, type OpenRouterOptions } from "./llm/openrouter";
+export { RaceLlm } from "./llm/race";
 export {
   GNANI_FORMATS,
   GNANI_LANGUAGES,

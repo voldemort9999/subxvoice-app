@@ -7,7 +7,14 @@
 
 import { join } from "node:path";
 import type { DeciderProvider, LlmProvider, SttProvider } from "@subx/core";
-import { createDecider, createLlm, createStt, isGnaniFormat, isGnaniLanguage } from "@subx/providers";
+import {
+  createDecider,
+  createLlm,
+  createStt,
+  isGnaniFormat,
+  isGnaniLanguage,
+  RaceLlm,
+} from "@subx/providers";
 import { app } from "electron";
 import type { Account } from "./auth";
 import { DECISIONS_URL, LLM_URL, STT_URL } from "./auth";
@@ -45,6 +52,9 @@ export function loadDevEnv(): void {
  * is worse than passing nothing: OpenRouter answers `400 No models provided`.
  */
 const fromEnv = (name: string): string | undefined => process.env[name]?.trim() || undefined;
+
+/** How long the primary rewrite model answers alone before gpt-oss-120b joins the race. */
+const PRIMARY_HEAD_START_MS = 1500;
 
 export function createEngines(account: Account): Engines {
   const problems: string[] = [];
@@ -84,18 +94,38 @@ export function createEngines(account: Account): Engines {
   }
 
   try {
-    llm = createLlm({
+    // Gemini 3.5 Flash Lite answers first, pinned to Google's priority tier only. OpenRouter
+    // honours the endpoint tags strictly: an unknown tag is a 404, not a quiet reroute. Measured
+    // 2026-11-16 on Hinglish transliteration and an email: ~0.7–1.1 s, with one cold 1.8 s.
+    // Reasoning cannot be turned off on this endpoint, and setting its effort made no difference.
+    const primary = createLlm({
       id: "openrouter",
       token,
       baseUrl: LLM_URL,
-      model: fromEnv("OPENROUTER_MODEL"),
-      // Groq first: measured on a 693-character Hindi-English dictation it is both correct and
-      // the fastest of the lot (~750 ms, against Cerebras' ~2 s). Cerebras is excluded rather
-      // than merely deprioritised — it silently returns long input unconverted, and a fallback
-      // that corrupts the result is worse than one that is slow.
+      model: fromEnv("OPENROUTER_MODEL") ?? "google/gemini-3.5-flash-lite",
+      only: ["google-ai-studio/priority", "google-vertex/global/priority"],
+      reasoning: false,
+      // Not the race's head start: past that point it keeps running alongside the backup.
+      timeoutMs: 10000,
+    });
+    // gpt-oss-120b as the fallback, set up as before. Groq comes first: on a 693-character
+    // Hindi-English dictation it was both correct and the fastest (~750 ms, against Cerebras'
+    // ~2 s). Cerebras is excluded, not merely put last: it silently returns long input
+    // unconverted, and a fallback that corrupts the result is worse than one that is slow.
+    const backup = createLlm({
+      id: "openrouter",
+      token,
+      baseUrl: LLM_URL,
+      model: "openai/gpt-oss-120b",
       order: ["groq"],
       ignore: ["cerebras"],
     });
+    // Race mode, for dictation only: Follow My Words uses `writer`, never this. After the head
+    // start gpt-oss-120b is asked too, and whichever answers first is typed. Both failing is
+    // the only case that reaches the user as an error.
+    llm = new RaceLlm(primary, backup, PRIMARY_HEAD_START_MS, (reason) =>
+      console.warn(`[llm] racing gpt-oss-120b: ${reason}`),
+    );
   } catch (error) {
     problems.push(describe("Rewriting", error));
   }

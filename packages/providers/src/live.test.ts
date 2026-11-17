@@ -69,11 +69,11 @@ describe.skipIf(!gnaniKey)("Gnani (live)", () => {
 describe.skipIf(!openRouterKey)("OpenRouter (live)", () => {
   it("transliterates Devanagari without translating it", async () => {
     const llm = createLlm({ id: "openrouter", token: openRouterKey, order: ["cerebras", "groq"] });
-    const { transliteratePrompt } = await import("@subx/core");
+    const { dictationPrompt } = await import("@subx/core");
 
     const started = Date.now();
     const response = await llm.complete({
-      system: transliteratePrompt(),
+      system: dictationPrompt(),
       messages: [{ role: "user", content: "मुझे कल सुबह नौ बजे meeting attend करनी है" }],
     });
     console.log(`llm: ${Date.now() - started} ms ->`, response.text);

@@ -5,13 +5,14 @@ import type { DictionaryStore, HistoryStore } from "./contracts/store";
 import type { SttProvider, Transcript } from "./contracts/stt";
 import { SubxError } from "./errors";
 import {
+  dictationPrompt,
   emailPrompt,
   INTENT_CRITERIA,
   INTENT_QUESTION,
   messagePrompt,
   needsTransliteration,
   styleRewritePrompt,
-  transliteratePrompt,
+  tidyDictation,
 } from "./prompts";
 import { Router } from "./router";
 import { applyRules } from "./rules";
@@ -226,7 +227,13 @@ export class Pipeline {
     // model call, and either way a failure falls back to what was actually heard.
     const rewritten =
       intent === "dictation"
-        ? await this.finalise(text, context, script, mode)
+        ? await this.finalise(
+            text,
+            context,
+            script,
+            mode,
+            dictionary.map((entry) => entry.word),
+          )
         : await this.compose(text, intent, script, options);
     const finalText = rewritten.text;
     const llmMs = clock.lap();
@@ -321,6 +328,7 @@ export class Pipeline {
     context: AppContext,
     script: ScriptPreference,
     mode: Mode,
+    vocabulary: string[] = [],
   ): Promise<{ text: string; error?: string }> {
     // Style mode exists to rewrite, so without a model there is nothing honest to return — the raw
     // words are not "styled" text. Exact mode is different: the words are already what was asked
@@ -328,15 +336,23 @@ export class Pipeline {
     if (mode === "style" && !this.deps.llm) {
       throw new SubxError("unsupported", "Style mode needs an LLM provider");
     }
-    const wanted = mode === "style" || needsTransliteration(text, script);
+    // Every Roman dictation goes to the model, English included: it is also where misheard words
+    // are repaired and the chat style applied (user, 2026-11-16). That costs pure English about a
+    // second it did not pay before. The native-script setting still skips the model.
+    const wanted = mode === "style" || script === "roman";
     if (!wanted) return { text };
     // The last silent path: no model means the script stays as heard, and the user should know
-    // that rather than conclude the setting does nothing.
+    // that rather than conclude the setting does nothing. English needs no script change, so it
+    // goes in as heard with nothing to report.
     if (!this.deps.llm) {
-      return { text, error: "Rewriting is unavailable, so the words went in as heard." };
+      return needsTransliteration(text, script)
+        ? { text, error: "Rewriting is unavailable, so the words went in as heard." }
+        : { text };
     }
 
-    const system = mode === "style" ? styleRewritePrompt(context, script) : transliteratePrompt();
+    const casual = mode !== "style";
+    const finish = (written: string) => (casual ? tidyDictation(written) : written);
+    const system = casual ? dictationPrompt(vocabulary) : styleRewritePrompt(context, script);
     try {
       const response = await this.deps.llm.complete({
         system,
@@ -354,10 +370,10 @@ export class Pipeline {
           .complete({ system: `${system}\n\n${STILL_NATIVE}`, messages: [{ role: "user", content: text }] })
           .then((response) => response.text.trim())
           .catch(() => "");
-        if (again && !needsTransliteration(again, script)) return { text: again };
+        if (again && !needsTransliteration(again, script)) return { text: finish(again) };
         return { text: rewritten, error: "Rewriting left the text in its original script." };
       }
-      return { text: rewritten };
+      return { text: finish(rewritten) };
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       return { text, error: `Rewriting failed (${reason}), so the words went in as heard.` };
